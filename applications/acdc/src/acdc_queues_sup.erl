@@ -32,14 +32,14 @@
 %%%=============================================================================
 
 %%------------------------------------------------------------------------------
-%% @doc Starts the supervisor.
+%% @doc Starts the supervisor
 %% @end
 %%------------------------------------------------------------------------------
--spec start_link() -> kz_types:startlink_ret().
+-spec start_link() -> kz_term:startlink_ret().
 start_link() ->
     supervisor:start_link({'local', ?SERVER}, ?MODULE, []).
 
--spec new(kz_term:ne_binary(), kz_term:ne_binary()) -> kz_types:startlink_ret().
+-spec new(kz_term:ne_binary(), kz_term:ne_binary()) -> kz_term:startlink_ret().
 new(AcctId, QueueId) ->
     case find_queue_supervisor(AcctId, QueueId) of
         P when is_pid(P) -> {'ok', P};
@@ -79,7 +79,8 @@ find_queue_supervisor(AcctId, QueueId, [Super|Rest]) ->
 status() ->
     ?PRINT("ACDc Queues Status"),
     Ws = workers(),
-    _ = kz_util:spawn(fun() -> lists:foreach(fun acdc_queue_sup:status/1, Ws) end),
+%    _ = kz_util:spawn(fun() -> lists:foreach(fun acdc_queue_sup:status/1, Ws) end),
+    lists:foreach(fun acdc_queue_sup:status/1, Ws),
     'ok'.
 
 -spec queues_running() -> [{pid(), any()}].
@@ -91,13 +92,14 @@ queues_running() ->
 %%%=============================================================================
 
 %%------------------------------------------------------------------------------
-%% @doc Whenever a supervisor is started using `supervisor:start_link/[2,3]',
+%% @private
+%% @doc Whenever a supervisor is started using supervisor:start_link/[2,3],
 %% this function is called by the new process to find out about
 %% restart strategy, maximum restart frequency and child
 %% specifications.
 %% @end
 %%------------------------------------------------------------------------------
--spec init(any()) -> kz_types:sup_init_ret().
+-spec init(any()) -> kz_term:sup_init_ret().
 init([]) ->
     RestartStrategy = 'simple_one_for_one',
     MaxRestarts = 1,

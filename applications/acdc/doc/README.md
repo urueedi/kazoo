@@ -117,7 +117,7 @@ Q                        A1(_)(R)
 
 #### Queues
 
-Queues manage the dispersal of member calls to agents. Because the queue won't know if an agent is busy in another queue, the queue will broadcast a `member_connect_req` to all known agents. The queue will collect `member_connect_resp`s and choose one agent, based on routing strategy, to send the `member_connect_win` message. If the agent is unable to connect the call and send the queue a `member_connected`, the agent will attempt the next appropriate `member_connect_resp`. If the list is exhausted, the queue will wait a configurable amount of time before sending another `member_connect_req` and repeating the process.
+Queues manage the dispersal of member calls to agents. Because the queue won't know if an agent is busy in another queue, the queue will broadcast a `member_connect_req` to all known agents. The queue will collect `member_connect_resp`s and choose one or more agents, based on routing strategy, to send the `member_connect_win` message. If the agent is unable to connect the call and send the queue a `member_connected`, the agent will attempt the next appropriate `member_connect_resp`. If the list is exhausted, the queue will wait a configurable amount of time before sending another `member_connect_req` and repeating the process.
 
 ##### Queue Process Initialization
 

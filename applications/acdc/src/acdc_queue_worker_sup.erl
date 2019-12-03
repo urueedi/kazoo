@@ -2,7 +2,7 @@
 %%% @copyright (C) 2012-2020, 2600Hz
 %%% @doc
 %%% @author James Aimonetti
-%%% @author Sponsored by GTNetwork LLC, Implemented by SIPLABS LLC
+%%% @author KAZOO-3596: Sponsored by GTNetwork LLC, implemented by SIPLABS LLC
 %%% @end
 %%%-----------------------------------------------------------------------------
 -module(acdc_queue_worker_sup).
@@ -31,10 +31,10 @@
 %%%=============================================================================
 
 %%------------------------------------------------------------------------------
-%% @doc Starts the supervisor.
+%% @doc Starts the supervisor
 %% @end
 %%------------------------------------------------------------------------------
--spec start_link(pid(), kz_term:ne_binary(), kz_term:ne_binary()) -> kz_types:startlink_ret().
+-spec start_link(pid(), kz_term:ne_binary(), kz_term:ne_binary()) -> kz_term:startlink_ret().
 start_link(MgrPid, AcctId, QueueId) ->
     supervisor:start_link(?SERVER, [MgrPid, AcctId, QueueId]).
 
@@ -55,7 +55,7 @@ shared_queue(WorkerSup) ->
         [P] -> P
     end.
 
--spec start_shared_queue(pid(), pid(), kz_term:ne_binary(), kz_term:ne_binary(), kz_term:api_integer()) -> kz_types:sup_startchild_ret().
+-spec start_shared_queue(pid(), pid(), kz_term:ne_binary(), kz_term:ne_binary(), kz_term:api_integer()) -> kz_term:sup_startchild_ret().
 start_shared_queue(WorkerSup, FSMPid, AcctId, QueueId, Priority) ->
     supervisor:start_child(WorkerSup, ?WORKER_ARGS('acdc_queue_shared', [FSMPid, AcctId, QueueId, Priority])).
 
@@ -66,7 +66,7 @@ fsm(WorkerSup) ->
         [P] -> P
     end.
 
--spec start_fsm(pid(), pid(), kz_json:object()) -> kz_types:sup_startchild_ret().
+-spec start_fsm(pid(), pid(), kz_json:object()) -> kz_term:sup_startchild_ret().
 start_fsm(WorkerSup, MgrPid, QueueJObj) ->
     ListenerPid = self(),
     supervisor:start_child(WorkerSup, ?WORKER_ARGS('acdc_queue_fsm', [MgrPid, ListenerPid, QueueJObj])).
@@ -104,13 +104,14 @@ print_status([{K, V}|T]) ->
 %%%=============================================================================
 
 %%------------------------------------------------------------------------------
-%% @doc Whenever a supervisor is started using `supervisor:start_link/[2,3]',
+%% @private
+%% @doc Whenever a supervisor is started using supervisor:start_link/[2,3],
 %% this function is called by the new process to find out about
 %% restart strategy, maximum restart frequency and child
 %% specifications.
 %% @end
 %%------------------------------------------------------------------------------
--spec init(list()) -> kz_types:sup_init_ret().
+-spec init(list()) -> kz_term:sup_init_ret().
 init(Args) ->
     RestartStrategy = 'one_for_all',
     MaxRestarts = 2,

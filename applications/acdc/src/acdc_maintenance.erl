@@ -2,6 +2,8 @@
 %%% @copyright (C) 2013-2020, 2600Hz
 %%% @doc Helpers for cli commands
 %%% @author James Aimonetti
+%%%
+%%% @author James Aimonetti
 %%% @end
 %%%-----------------------------------------------------------------------------
 -module(acdc_maintenance).
@@ -12,11 +14,8 @@
         ,current_agents/1
         ,logout_agents/1, logout_agent/2
         ,agent_presence_id/2
-        ,migrate_to_acdc_db/0, migrate/0
-
+        ,migrate_to_acdc_db/0, migrate_to_acdc_db/1, migrate/0
         ,refresh/0, refresh_account/1
-        ,register_views/0
-
         ,flush_call_stat/1
         ,queues_summary/0, queues_summary/1, queue_summary/2
         ,queues_detail/0, queues_detail/1, queue_detail/2
@@ -31,6 +30,8 @@
         ,agent_queue_login/3
         ,agent_queue_logout/3
         ]).
+
+-export([register_views/0]).
 
 -include("acdc.hrl").
 
@@ -137,9 +138,9 @@ current_calls(AccountId, Props) ->
 get_and_show(AccountId, QueueId, Req) ->
     kz_util:put_callid(<<"acdc_maint.", AccountId/binary, ".", QueueId/binary>>),
     case kz_amqp_worker:call_collect(Req
-                                    ,fun kapi_acdc_stats:publish_current_calls_req/1
-                                    ,'acdc'
-                                    )
+                                     ,fun kapi_acdc_stats:publish_current_calls_req/1
+                                     ,'acdc'
+                                     )
     of
         {_, []} ->
             io:format("no call stats returned for account ~s (queue ~s)~n", [AccountId, QueueId]);
@@ -193,28 +194,25 @@ refresh() ->
     end.
 
 -spec refresh_account(kz_term:ne_binary()) -> 'ok'.
-refresh_account(Account) ->
-    MODB = acdc_stats_util:db_name(Account),
-    refresh_account(MODB, kazoo_modb:maybe_create(MODB)),
-    lager:debug("refreshed: ~s", [MODB]).
+refresh_account(Acct) ->
+    AccountDb = kz_util:format_account_id(Acct, 'encoded'),
+    kz_datamgr:revise_views_from_folder(AccountDb, 'acdc'),
+    io:format("revised acdc views for ~s~n", [AccountDb]),
+    MoDB = acdc_stats_util:db_name(Acct),
+    refresh_account(MoDB, kazoo_modb:maybe_create(MoDB)),
+    lager:debug("refreshed: ~s", [MoDB]).
 
-refresh_account(MODB, 'true') ->
-    lager:debug("created ~s", [MODB]),
-    _ = kapps_maintenance:refresh(MODB),
-    'ok';
-refresh_account(MODB, 'false') ->
-    case kz_datamgr:db_exists(MODB) of
+refresh_account(MoDB, 'true') ->
+    lager:debug("created ~s", [MoDB]),
+    kz_datamgr:revise_views_from_folder(MoDB, 'acdc');
+refresh_account(MoDB, 'false') ->
+    case kz_datamgr:db_exists(MoDB) of
         'true' ->
-            lager:debug("exists ~s", [MODB]),
-            _ = kapps_maintenance:refresh(MODB),
-            'ok';
+            lager:debug("exists ~s", [MoDB]),
+            kz_datamgr:revise_views_from_folder(MoDB, 'acdc');
         'false' ->
-            lager:debug("modb ~s was not created", [MODB])
+            lager:debug("modb ~s was not created", [MoDB])
     end.
-
--spec register_views() -> 'ok'.
-register_views() ->
-    kz_datamgr:register_views_from_folder('acdc').
 
 -spec migrate() -> 'ok'.
 migrate() ->
@@ -278,8 +276,8 @@ maybe_migrate(AccountId) ->
                                               ,[{'account_id', AccountId}
                                                ,{'type', <<"acdc_activation">>}
                                                ]),
-            _ = kz_datamgr:ensure_saved(?KZ_ACDC_DB, Doc),
-            io:format("saved account ~s to db~n", [AccountId]);
+            kz_datamgr:ensure_saved(?KZ_ACDC_DB, Doc),
+            io:format("saved account ~s to acdc db~n", [AccountId]);
         {'error', _E} ->
             io:format("failed to query queue listing for account ~s: ~p~n", [AccountId, _E])
     end.
@@ -302,7 +300,7 @@ flush_call_stat(CallId) ->
             acdc_stats:call_abandoned(kz_json:get_value(<<"Account-ID">>, Call)
                                      ,kz_json:get_value(<<"Queue-ID">>, Call)
                                      ,CallId
-                                     ,'INTERNAL_ERROR'
+                                     ,<<"INTERNAL_ERROR">>
                                      ),
             io:format("setting call to 'abandoned'~n", [])
     end.
@@ -523,3 +521,7 @@ agent_queue_logout(AcctId, AgentId, QueueId) ->
                ]),
     kz_amqp_worker:cast(Update, fun kapi_acdc_agent:publish_logout_queue/1),
     lager:info("published logout update for agent").
+
+-spec register_views() -> 'ok'.
+register_views() ->
+    kz_datamgr:register_views_from_folder(?APP).

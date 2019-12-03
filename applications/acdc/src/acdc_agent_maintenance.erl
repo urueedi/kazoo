@@ -66,6 +66,6 @@ agent_restart(AcctId, AgentId) ->
             lager:info("Terminating existing agent process ~p", [S]),
             exit(S, 'kill'),
             lager:info("Restarting agent ~s in ~s", [AgentId, AcctId]),
-            _ = acdc_agents_sup:new(AcctId, AgentId),
+            acdc_agents_sup:new(AcctId, AgentId),
             'ok'
     end.

@@ -1,5 +1,5 @@
 %%%-----------------------------------------------------------------------------
-%%% @copyright (C) 2012-2020, 2600Hz
+%%% @copyright (C) 2012-2017, 2600Hz INC
 %%% @doc
 %%% @author James Aimonetti
 %%% @end
@@ -8,9 +8,12 @@
 
 -export([handle_call_event/2
         ,handle_member_call/3
+        ,handle_member_call_cancel/2
         ,handle_member_resp/2
         ,handle_member_accepted/2
         ,handle_member_retry/2
+        ,handle_member_callback_reg/2
+        ,handle_member_callback_accepted/2
         ,handle_config_change/2
         ,handle_presence_probe/2
         ]).
@@ -52,6 +55,11 @@ handle_member_call(JObj, Props, Delivery) ->
     acdc_queue_fsm:member_call(props:get_value('fsm_pid', Props), JObj, Delivery),
     gen_listener:cast(props:get_value('server', Props), {'delivery', Delivery}).
 
+-spec handle_member_call_cancel(kz_json:object(), kz_term:proplist()) -> 'ok'.
+handle_member_call_cancel(JObj, Props) ->
+    'true' = kapi_acdc_queue:member_call_cancel_v(JObj),
+    acdc_queue_fsm:member_call_cancel(props:get_value('fsm_pid', Props), JObj).
+
 -spec handle_member_resp(kz_json:object(), kz_term:proplist()) -> 'ok'.
 handle_member_resp(JObj, Props) ->
     'true' = kapi_acdc_queue:member_connect_resp_v(JObj),
@@ -66,6 +74,18 @@ handle_member_accepted(JObj, Props) ->
 handle_member_retry(JObj, Props) ->
     'true' = kapi_acdc_queue:member_connect_retry_v(JObj),
     acdc_queue_fsm:member_connect_retry(props:get_value('fsm_pid', Props), JObj).
+
+-spec handle_member_callback_reg(kz_json:object(), kz_term:proplist()) -> 'ok'.
+handle_member_callback_reg(JObj, Props) ->
+    Srv = props:get_value('server', Props),
+    CallId = kz_json:get_value(<<"Call-ID">>, JObj),
+    acdc_util:unbind_from_call_events(CallId, Srv),
+    acdc_queue_fsm:register_callback(props:get_value('fsm_pid', Props), JObj).
+
+-spec handle_member_callback_accepted(kz_json:object(), kz_term:proplist()) -> 'ok'.
+handle_member_callback_accepted(JObj, Props) ->
+    'true' = kapi_acdc_queue:member_callback_accepted_v(JObj),
+    acdc_queue_fsm:member_callback_accepted(props:get_value('fsm_pid', Props), JObj).
 
 -spec handle_config_change(kz_json:object(), kz_term:proplist()) -> any().
 handle_config_change(JObj, _Props) ->
@@ -141,13 +161,12 @@ update_probe(JObj, _Sup, AcctId, QueueId) ->
 
 send_probe(JObj, State) ->
     To = <<(kz_json:get_value(<<"Username">>, JObj))/binary
-          ,"@"
-          ,(kz_json:get_value(<<"Realm">>, JObj))/binary
-         >>,
+           ,"@"
+           ,(kz_json:get_value(<<"Realm">>, JObj))/binary>>,
     PresenceUpdate =
         [{<<"State">>, State}
         ,{<<"Presence-ID">>, To}
-        ,{<<"Call-ID">>, kz_term:to_hex_binary(crypto:hash('md5', To))}
+        ,{<<"Call-ID">>, kz_term:to_hex_binary(crypto:hash(md5, To))}
          | kz_api:default_headers(?APP_NAME, ?APP_VERSION)
         ],
     kapi_presence:publish_update(PresenceUpdate).

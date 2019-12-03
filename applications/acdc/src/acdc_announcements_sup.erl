@@ -27,10 +27,11 @@
 %%%=============================================================================
 
 %%------------------------------------------------------------------------------
-%% @doc Starts the supervisor.
+%% @doc Starts the supervisor
+%%
 %% @end
 %%------------------------------------------------------------------------------
--spec start_link() -> kz_types:sup_startchild_ret().
+-spec start_link() -> kz_term:sup_startchild_ret().
 start_link() ->
     supervisor:start_link({local, ?SERVER}, ?MODULE, []).
 
@@ -49,6 +50,7 @@ maybe_start_announcements(Manager, Call, Props) ->
 
 %%------------------------------------------------------------------------------
 %% @doc Stop an announcements child process
+%%
 %% @end
 %%------------------------------------------------------------------------------
 -spec stop_announcements(pid()) -> 'ok' | {'error', atom()}.
@@ -60,14 +62,15 @@ stop_announcements(Pid) ->
 %%%=============================================================================
 
 %%------------------------------------------------------------------------------
-%% @doc Whenever a supervisor is started using `supervisor:start_link/[2,3]',
+%% @private
+%% @doc Whenever a supervisor is started using supervisor:start_link/[2,3],
 %% this function is called by the new process to find out about
 %% restart strategy, maximum restart intensity, and child
 %% specifications.
 %%
 %% @end
 %%------------------------------------------------------------------------------
--spec init(list()) -> kz_types:sup_init_ret().
+-spec init(list()) -> kz_term:sup_init_ret().
 init([]) ->
 
     SupFlags = #{strategy => simple_one_for_one,

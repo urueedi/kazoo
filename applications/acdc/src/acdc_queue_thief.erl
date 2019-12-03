@@ -2,6 +2,8 @@
 %%% @copyright (C) 2010-2020, 2600Hz
 %%% @doc Caller calls in and gets the first available call from the queue
 %%% @author James Aimonetti
+%%%
+%%% @author James Aimonetti
 %%% @end
 %%%-----------------------------------------------------------------------------
 -module(acdc_queue_thief).
