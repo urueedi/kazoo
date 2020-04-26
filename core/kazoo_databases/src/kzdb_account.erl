@@ -34,6 +34,11 @@
 delete('undefined') -> {'ok', 'undefined'};
 delete(?MATCH_ACCOUNT_RAW(AccountId)) ->
     case kzd_accounts:fetch(AccountId) of
+        {'error', 'not_found'} ->
+            lager:info("account database doesn't exists, making sure all remaining residues of account ~s are deleted"
+                      ,[AccountId]
+                      ),
+            delete(AccountId, kz_json:new());
         {'error', _}=Error -> Error;
         {'ok', AccountJObj} ->
             lager:info("attempting to delete ~s(~s)", [AccountId, kz_doc:revision(AccountJObj)]),
@@ -43,7 +48,7 @@ delete(?MATCH_ACCOUNT_RAW(AccountId)) ->
 -spec delete(kz_term:ne_binary(), kzd_accounts:doc()) ->
           {'ok', kzd_accounts:doc()} |
           {'error', delete_errors()}.
-delete(_AccountId, AccountJObj) ->
+delete(AccountId, AccountJObj) ->
     DeleteRoutines = [fun delete_remove_services/1
                      ,fun delete_free_numbers/1
                      ,fun delete_remove_sip_aggregates/1
@@ -53,42 +58,42 @@ delete(_AccountId, AccountJObj) ->
                      ,fun delete_remove_from_accounts/1
                      ],
     case lists:foldl(fun(F, A) -> F(A) end
-                    ,{AccountJObj, []}
+                    ,{AccountId, AccountJObj, []}
                     ,DeleteRoutines
                     )
     of
-        {DeletedAccount, []} ->   {'ok', DeletedAccount};
-        {_AccountJObj, Errors} -> {'error', Errors}
+        {_AccountId, DeletedAccount, []} ->   {'ok', DeletedAccount};
+        {_AccountId, _AccountJObj, Errors} -> {'error', Errors}
     end.
 
--type delete_acc() :: {kzd_accounts:doc(), delete_errors()}.
+-type delete_acc() :: {kz_term:ne_binary(), kzd_accounts:doc(), delete_errors()}.
 
 %%------------------------------------------------------------------------------
 %% @doc
 %% @end
 %%------------------------------------------------------------------------------
 -spec delete_remove_services(delete_acc()) -> delete_acc().
-delete_remove_services({AccountJObj, Errors}=Acc) ->
-    try kz_services:delete(kz_doc:id(AccountJObj)) of
+delete_remove_services({AccountId, AccountJObj, Errors}=Acc) ->
+    try kz_services:delete(AccountId) of
         _S ->
             lager:info("deleted account's services"),
             Acc
     catch
         _E:_R ->
             lager:error("failed to delete services: ~s: ~p", [_E, _R]),
-            {AccountJObj, [{'error', <<"unable to cancel services">>, 500} | Errors]}
+            {AccountId, AccountJObj, [{'error', <<"unable to cancel services">>, 500} | Errors]}
     end.
 
 -spec delete_free_numbers(delete_acc()) -> delete_acc().
-delete_free_numbers({AccountJObj, _Errors}=Acc) ->
-    _Freed = knm_numbers:free(kz_doc:id(AccountJObj)),
+delete_free_numbers({AccountId, _AccountJObj, _Errors}=Acc) ->
+    _Freed = knm_numbers:free(AccountId),
     lager:debug("freed account's numbers: ~p", [_Freed]),
     Acc.
 
 -spec delete_remove_sip_aggregates(delete_acc()) -> delete_acc().
-delete_remove_sip_aggregates({AccountJObj, _Errors}=Acc) ->
+delete_remove_sip_aggregates({AccountId, _AccountJObj, _Errors}=Acc) ->
     ViewOptions = ['include_docs'
-                  ,{'key', kz_doc:id(AccountJObj)}
+                  ,{'key', AccountId}
                   ],
     case kz_datamgr:get_results(?KZ_SIP_DB, <<"credentials/lookup_by_account">>, ViewOptions) of
         {'error', _R} ->
@@ -100,30 +105,36 @@ delete_remove_sip_aggregates({AccountJObj, _Errors}=Acc) ->
     end,
     Acc.
 
-delete_aux_services({_AccountJObj, _Errors}=Acc) ->
+delete_aux_services({_AccountId, _AccountJObj, _Errors}=Acc) ->
     Acc.
 
 -spec delete_remove_db(delete_acc()) -> delete_acc().
-delete_remove_db({AccountJObj, Errors}=Acc) ->
-    AccountDb = kz_doc:account_db(AccountJObj),
+delete_remove_db({AccountId, AccountJObj, Errors}=Acc) ->
+    AccountDb = kzs_util:format_account_db(AccountId),
     case kz_datamgr:db_delete(AccountDb) of
         'true' ->
             lager:debug("deleted db ~s", [AccountDb]),
             Acc;
         'false' ->
-            lager:debug("failed to remove database ~s", [AccountDb]),
-            {AccountJObj, [{'error', <<"unable to remove database">>, 500} | Errors]}
+            case kz_datamgr:db_exists(AccountDb) of
+                'true' ->
+                    lager:debug("failed to remove database ~s", [AccountDb]),
+                    {AccountId, AccountJObj, [{'error', <<"unable to remove database">>, 500} | Errors]};
+                'false' ->
+                    lager:debug("db ~s is already deleted", [AccountDb]),
+                    Acc
+            end
     end.
 
 -spec delete_mod_dbs(delete_acc()) -> delete_acc().
-delete_mod_dbs({AccountJObj, _Errors}=Acc) ->
-    MODBs = kapps_util:get_account_mods(kz_doc:id(AccountJObj), 'encoded'),
+delete_mod_dbs({AccountId, _AccountJObj, _Errors}=Acc) ->
+    MODBs = kapps_util:get_account_mods(AccountId, 'encoded'),
     _ = [kz_datamgr:db_delete(MODB) || MODB <- MODBs],
     Acc.
 
 -spec delete_remove_from_accounts(delete_acc()) -> delete_acc().
-delete_remove_from_accounts({AccountJObj, Errors}=Acc) ->
-    case kzd_accounts:fetch(kz_doc:id(AccountJObj), 'accounts') of
+delete_remove_from_accounts({AccountId, AccountJObj, Errors}=Acc) ->
+    case kzd_accounts:fetch(AccountId, 'accounts') of
         {'ok', AccountsJObj} ->
             _Deleted = kz_datamgr:del_doc(?KZ_ACCOUNTS_DB, AccountsJObj),
             lager:info("deleted 'accounts' account doc: ~p", [_Deleted]),
@@ -133,7 +144,7 @@ delete_remove_from_accounts({AccountJObj, Errors}=Acc) ->
             Acc;
         {'error', _R} ->
             lager:info("failed to fetch 'accounts' account doc: ~p", [_R]),
-            {AccountJObj, [{'error', <<"unable to remove account definition">>, 500} | Errors]}
+            {AccountId, AccountJObj, [{'error', <<"unable to remove account definition">>, 500} | Errors]}
     end.
 
 -spec create(kz_term:ne_binary(), kz_json:object()) -> kzd_accounts:doc() | 'undefined'.

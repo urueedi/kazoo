@@ -9,7 +9,9 @@
 %%%-----------------------------------------------------------------------------
 -module(kz_services).
 
--export([account_id/1]).
+-export([account_id/1
+        ,set_account_id/2
+        ]).
 -export([services_jobj/1
         ,set_services_jobj/2
         ]).
@@ -157,6 +159,10 @@
 -spec account_id(services()) -> kz_term:api_ne_binary().
 account_id(#kz_services{account_id=AccountId}) ->
     AccountId.
+
+-spec set_account_id(services(), kz_term:ne_binary()) -> kz_term:api_ne_binary().
+set_account_id(#kz_services{}=Services, AccountId) ->
+    Services#kz_services{account_id=AccountId}.
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -870,9 +876,13 @@ fetch(Account=?NE_BINARY, Options) ->
 
 -spec handle_fetched_doc(kz_term:ne_binary(), fetch_options(), {'ok', kz_json:object()} | {'error', 'not_found'}) ->
                                 services().
-handle_fetched_doc(_AccountId, Options, {'ok', ServicesJObj}) ->
+handle_fetched_doc(AccountId, Options, {'ok', ServicesJObj}) ->
     Setters = [{fun set_services_jobj/2, ServicesJObj}
               ,{fun set_current_services_jobj/2, ServicesJObj}
+               %% if we have then let make sure we set the account id
+               %% in case we want to delete service doc of
+               %% a not completely deleted account
+              ,{fun set_account_id/2, AccountId}
               ],
     handle_fetch_options(setters(Setters), Options);
 handle_fetched_doc(AccountId, Options, {'error', 'not_found'}) ->
@@ -880,6 +890,10 @@ handle_fetched_doc(AccountId, Options, {'error', 'not_found'}) ->
     ServicesJObj = create(AccountId),
     Setters = [{fun set_services_jobj/2, ServicesJObj}
               ,{fun set_current_services_jobj/2, ServicesJObj}
+               %% if we have then let make sure we set the account id
+               %% in case we want to delete service doc of
+               %% a not completely deleted account
+              ,{fun set_account_id/2, AccountId}
               ],
     handle_fetch_options(setters(Setters), Options).
 
@@ -1194,9 +1208,9 @@ save_services_jobj(Services, ProposedJObj) ->
 -spec delete(kz_term:ne_binary() | services()) -> services().
 delete(?MATCH_ACCOUNT_RAW(AccountId)) ->
     delete(fetch(AccountId));
-delete(#kz_services{}=Services) ->
+delete(#kz_services{account_id = AccountId}=Services) ->
     %% TODO: cancel services with all bookkeepers...
-    _ = kz_datamgr:del_doc(?KZ_SERVICES_DB, kz_doc:id(services_jobj(Services))),
+    _ = kz_datamgr:del_doc(?KZ_SERVICES_DB, AccountId),
     Services.
 
 %%------------------------------------------------------------------------------
