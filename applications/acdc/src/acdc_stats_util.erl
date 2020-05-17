@@ -174,23 +174,10 @@ get_results_from_dbs(DBs, Data) ->
         merge_results(H, Acc)
         end, kz_json:new(), DBs).
 
-merge_results({[]}, Acc) ->
-    Acc;
-merge_results(H, {[]}) ->
-    H;
-merge_results(H, Acc) ->
-    Calls = kz_json:get_value(<<"calls">>, H),
-    Abandoned = kz_json:get_value(<<"abandoned">>, H),
-    WaitTime = kz_json:get_value(<<"wait_time">>, H),
-    TalkTime = kz_json:get_value(<<"talk_time">>, H),
-    Entered = kz_json:get_value(<<"entered_position">>, H),
-    
-    C = kz_json:get_value(<<"calls">>, Acc), Acc1 = kz_json:set_value(<<"calls">>, C + Calls, Acc),
-    A = kz_json:get_value(<<"abandoned">>, Acc), Acc2 = kz_json:set_value(<<"abandoned">>, A + Abandoned, Acc1),                
-    W = kz_json:get_value(<<"wait_time">>, Acc), Acc3 = kz_json:set_value(<<"wait_time">>, W + WaitTime, Acc2),                
-    T = kz_json:get_value(<<"talk_time">>, Acc), Acc4 = kz_json:set_value(<<"talk_time">>, T + TalkTime, Acc3),                
-    E = kz_json:get_value(<<"entered_position">>, Acc), Acc5= kz_json:set_value(<<"entered_position">>, max(E, Entered), Acc4),
-    Acc5.
+merge_results(JObj1, JObj2) ->
+    Fun = fun(_,{both, V1, V2}) when is_integer(V1), is_integer(V2) -> {ok, V1 + V2};
+             (_,{both, V, V}) -> {ok, V} end,
+    kz_json:merge(Fun, [JObj1, JObj2]).
 
 modb_range(AccountId, StartRange, EndRange) ->
     {{SY,SM,_}, _} = calendar:gregorian_seconds_to_datetime(StartRange),

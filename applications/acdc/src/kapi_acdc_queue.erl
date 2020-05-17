@@ -657,7 +657,7 @@ agents_availability_routing_key(AccountId, QueueId) ->
 -define(AGENTS_AVAILABLE_REQ_VALUES, [{<<"Event-Category">>, <<"queue">>}
                                      ,{<<"Event-Name">>, <<"agents_available_req">>}
                                      ]).
--define(AGENTS_AVAILABLE_REQ_TYPES, [{<<"Skills">>, fun kz_term:is_ne_binaries/1}]).
+-define(AGENTS_AVAILABLE_REQ_TYPES, [{<<"Skills">>, fun kz_term:is_ne_binary_or_binaries/1}]).
 
 -spec agents_available_req(kz_term:api_terms()) ->
                                   {'ok', iolist()} |

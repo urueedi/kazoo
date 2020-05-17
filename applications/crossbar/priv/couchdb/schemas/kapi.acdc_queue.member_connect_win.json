@@ -9,6 +9,9 @@
         "Agent-Process-ID": {
             "type": "string"
         },
+        "Agent-Process-IDs": {
+            "type": "string"
+        },
         "CDR-Url": {
             "type": "string"
         },

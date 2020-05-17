@@ -1,7 +1,7 @@
 {
     "$schema": "http://json-schema.org/draft-04/schema#",
-    "_id": "kapi.acdc_queue.agent_change",
-    "description": "AMQP API for acdc_queue.agent_change",
+    "_id": "kapi.acdc_stats.status_inbound",
+    "description": "AMQP API for acdc_stats.status_inbound",
     "properties": {
         "Account-ID": {
             "type": "string"
@@ -9,13 +9,7 @@
         "Agent-ID": {
             "type": "string"
         },
-        "Call-Direction": {
-            "type": "string"
-        },
-        "Callee-ID-Name": {
-            "type": "string"
-        },
-        "Callee-ID-Number": {
+        "Call-ID": {
             "type": "string"
         },
         "Caller-ID-Name": {
@@ -24,45 +18,35 @@
         "Caller-ID-Number": {
             "type": "string"
         },
-        "Change": {
-            "enum": [
-                "available",
-                "ringing",
-                "busy",
-                "unavailable"
-            ],
-            "type": "string"
-        },
         "Event-Category": {
             "enum": [
-                "queue"
+                "acdc_status_stat"
             ],
             "type": "string"
         },
         "Event-Name": {
             "enum": [
-                "agent_change"
+                "inbound"
             ],
             "type": "string"
         },
-        "Priority": {
+        "Pause-Alias": {
             "type": "string"
         },
-        "Process-ID": {
+        "Pause-Time": {
+            "type": "integer"
+        },
+        "Timestamp": {
             "type": "string"
         },
-        "Queue-ID": {
-            "type": "string"
-        },
-        "Skills": {
-            "type": "string"
+        "Wait-Time": {
+            "type": "integer"
         }
     },
     "required": [
         "Account-ID",
         "Agent-ID",
-        "Change",
-        "Queue-ID"
+        "Timestamp"
     ],
     "type": "object"
 }

@@ -2,7 +2,8 @@
 %%% @copyright (C) 2012-2020, 2600Hz
 %%% @doc ACDc Eavesdrop.
 %%%
-%%% Created : 29 Nov 2012 by James Aimonetti <>
+%%% @author James Aimonetti
+%%% Created : 29 Nov 2012 by James Aimonetti 
 %%% @end
 %%%-----------------------------------------------------------------------------
 -module(acdc_eavesdrop).

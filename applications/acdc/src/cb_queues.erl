@@ -1,8 +1,6 @@
-%%%-------------------------------------------------------------------
-%%% @copyright (C) 2011-2017, 2600Hz
-%%% @doc
-%%%
-%%% CRUD for call queues
+%%%-----------------------------------------------------------------------------
+%%% @copyright (C) 2011-2020, 2600Hz
+%%% @doc CRUD for call queues
 %%% /queues
 %%%   GET: list all known queues
 %%%   PUT: create a new queue
