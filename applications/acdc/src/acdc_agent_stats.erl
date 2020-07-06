@@ -17,8 +17,8 @@
         ,agent_logged_in/2
         ,agent_logged_out/2
         ,agent_pending_logged_out/2
-        ,agent_connecting/3, agent_connecting/5
-        ,agent_connected/3, agent_connected/5
+        ,agent_connecting/5, agent_connecting/6
+        ,agent_connected/5, agent_connected/6
         ,agent_wrapup/3
         ,agent_paused/4
         ,agent_outbound/3
@@ -125,14 +125,14 @@ agent_pending_logged_out(AccountId, AgentId) ->
                        ,fun kapi_acdc_stats:publish_status_pending_logged_out/1
                        ).
 
--spec agent_connecting(kz_term:ne_binary(), kz_term:ne_binary(), kz_term:ne_binary()) ->
+-spec agent_connecting(kz_term:ne_binary(), kz_term:ne_binary(), kz_term:ne_binary(), kz_term:ne_binary(), kz_term:ne_binary()) ->
           'ok'.
-agent_connecting(AccountId, AgentId, CallId) ->
-    agent_connecting(AccountId, AgentId, CallId, 'undefined', 'undefined').
+agent_connecting(AccountId, AgentId, CallId, CIDName, CIDNumber) ->
+    agent_connecting(AccountId, AgentId, CallId, CIDName, CIDNumber,  'undefined').
 
--spec agent_connecting(kz_term:ne_binary(), kz_term:ne_binary(), kz_term:ne_binary(), kz_term:api_binary(), kz_term:api_binary()) ->
+-spec agent_connecting(kz_term:ne_binary(), kz_term:ne_binary(), kz_term:ne_binary(), kz_term:api_binary(), kz_term:api_binary(), kz_term:api_binary()) ->
           'ok'.
-agent_connecting(AccountId, AgentId, CallId, CallerIDName, CallerIDNumber) ->
+agent_connecting(AccountId, AgentId, CallId, CallerIDName, CallerIDNumber, QueueId) ->
     Prop = props:filter_undefined(
              [{<<"Account-ID">>, AccountId}
              ,{<<"Agent-ID">>, AgentId}
@@ -141,6 +141,7 @@ agent_connecting(AccountId, AgentId, CallId, CallerIDName, CallerIDNumber) ->
              ,{<<"Call-ID">>, CallId}
              ,{<<"Caller-ID-Name">>, CallerIDName}
              ,{<<"Caller-ID-Number">>, CallerIDNumber}
+             ,{<<"Queue-ID">>, QueueId}
               | kz_api:default_headers(?APP_NAME, ?APP_VERSION)
              ]),
     edr_log_status_change(AccountId, Prop),
@@ -148,14 +149,14 @@ agent_connecting(AccountId, AgentId, CallId, CallerIDName, CallerIDNumber) ->
                        ,fun kapi_acdc_stats:publish_status_connecting/1
                        ).
 
--spec agent_connected(kz_term:ne_binary(), kz_term:ne_binary(), kz_term:ne_binary()) ->
+-spec agent_connected(kz_term:ne_binary(), kz_term:ne_binary(), kz_term:ne_binary(), kz_term:ne_binary(), kz_term:ne_binary()) ->
           'ok'.
-agent_connected(AccountId, AgentId, CallId) ->
-    agent_connected(AccountId, AgentId, CallId, 'undefined', 'undefined').
+agent_connected(AccountId, AgentId, CallId, CIDName, CIDNumber) ->
+    agent_connected(AccountId, AgentId, CallId, CIDName, CIDNumber,  'undefined').
 
--spec agent_connected(kz_term:ne_binary(), kz_term:ne_binary(), kz_term:ne_binary(), kz_term:api_binary(), kz_term:api_binary()) ->
+-spec agent_connected(kz_term:ne_binary(), kz_term:ne_binary(), kz_term:ne_binary(), kz_term:api_binary(), kz_term:api_binary(), kz_term:api_binary()) ->
           'ok'.
-agent_connected(AccountId, AgentId, CallId, CallerIDName, CallerIDNumber) ->
+agent_connected(AccountId, AgentId, CallId, CallerIDName, CallerIDNumber, QueueId) ->
     Prop = props:filter_undefined(
              [{<<"Account-ID">>, AccountId}
              ,{<<"Agent-ID">>, AgentId}
@@ -164,6 +165,7 @@ agent_connected(AccountId, AgentId, CallId, CallerIDName, CallerIDNumber) ->
              ,{<<"Call-ID">>, CallId}
              ,{<<"Caller-ID-Name">>, CallerIDName}
              ,{<<"Caller-ID-Number">>, CallerIDNumber}
+             ,{<<"Queue-ID">>, QueueId}
               | kz_api:default_headers(?APP_NAME, ?APP_VERSION)
              ]),
     edr_log_status_change(AccountId, Prop),
@@ -342,8 +344,9 @@ status_match_builder_fold(<<"Agent-ID">>, AgentId, {StatusStat, Contstraints}) -
 status_match_builder_fold(<<"Start-Range">>, Start, {StatusStat, Contstraints}) ->
     Now = kz_time:current_tstamp(),
     Past = Now - ?CLEANUP_WINDOW,
+    Start1 = acdc_stats_util:apply_query_window_wiggle_room(Start, Past),
 
-    try kz_term:to_integer(Start) of
+    try kz_term:to_integer(Start1) of
         N when N < Past ->
             {'error', kz_json:from_list([{<<"Start-Range">>, <<"supplied value is too far in the past">>}
                                         ,{<<"Window-Size">>, ?CLEANUP_WINDOW}
@@ -366,8 +369,9 @@ status_match_builder_fold(<<"Start-Range">>, Start, {StatusStat, Contstraints}) 
 status_match_builder_fold(<<"End-Range">>, End, {StatusStat, Contstraints}) ->
     Now = kz_time:current_tstamp(),
     Past = Now - ?CLEANUP_WINDOW,
+    End1 = acdc_stats_util:apply_query_window_wiggle_room(End, Past),
 
-    try kz_term:to_integer(End) of
+    try kz_term:to_integer(End1) of
         N when N < Past ->
             {'error', kz_json:from_list([{<<"End-Range">>, <<"supplied value is too far in the past">>}
                                         ,{<<"Window-Size">>, ?CLEANUP_WINDOW}

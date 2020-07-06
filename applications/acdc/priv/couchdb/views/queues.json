@@ -19,12 +19,13 @@
                 "  for (i in doc.queues) {",
                 "    emit(doc.queues[i], {",
                 "      'id': doc._id,",
-                "      'agent_priority': doc.acdc_agent_priority,",
-                "      'skills': doc.acdc_skills",
+                "      'agent_priority': doc.acdc_agent_priority || 0,",
+                "      'skills': doc.acdc_skills || []",
                 "    });",
                 "  }",
                 "}"
-            ]
+            ],
+            "reduce": "_count"
         },
         "crossbar_listing": {
             "map": [

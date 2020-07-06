@@ -306,30 +306,15 @@ publish_restart(Context, AgentId) ->
 %%------------------------------------------------------------------------------
 -spec read(kz_term:api_binary(), cb_context:context()) -> cb_context:context().
 read(UserId, Context) ->
-    case kz_datamgr:open_cache_doc(cb_context:db_name(Context), UserId) of
-        {'ok', Doc} -> validate_user_id(UserId, Context, Doc);
-        {'error', 'not_found'} ->
-            cb_context:add_system_error('bad_identifier'
-                                       ,kz_json:from_list([{<<"cause">>, UserId}])
-                                       ,Context
-                                       );
-        {'error', _R} -> crossbar_util:response_db_fatal(Context)
+    Context1 = crossbar_doc:load(UserId, Context, ?TYPE_CHECK_OPTION(kzd_users:type())),
+    case cb_context:resp_status(Context1) of
+        'success' ->
+            cb_context:setters(Context1
+                                ,[{fun cb_context:set_user_id/2, UserId}
+                                ,{fun cb_context:set_resp_status/2, 'success'}
+         ]);
+        _Status -> Context1
     end.
-
--spec validate_user_id(kz_term:api_binary(), cb_context:context(), kz_json:object()) -> cb_context:context().
-validate_user_id(UserId, Context, Doc) ->
-    case kz_doc:is_soft_deleted(Doc) of
-        'true' ->
-            Msg = kz_json:from_list([{<<"cause">>, UserId}]),
-            cb_context:add_system_error('bad_identifier', Msg, Context);
-        'false'->
-            cb_context:setters(Context
-                              ,[{fun cb_context:set_user_id/2, UserId}
-                               ,{fun cb_context:set_doc/2, Doc}
-                               ,{fun cb_context:set_resp_status/2, 'success'}
-                               ])
-    end.
-
 
 -define(CB_AGENTS_LIST, <<"users/crossbar_listing">>).
 -spec fetch_all_agent_statuses(cb_context:context()) -> cb_context:context().
@@ -392,12 +377,12 @@ fetch_all_current_agent_stats(Context) ->
 -spec fetch_all_current_stats(cb_context:context(), kz_term:api_binary()) -> cb_context:context().
 fetch_all_current_stats(Context, AgentId) ->
     Now = kz_time:current_tstamp(),
-    Yday = Now - ?SECONDS_IN_DAY,
+    From = Now - min(?SECONDS_IN_DAY, ?ACDC_CLEANUP_WINDOW),
 
     Req = props:filter_undefined(
             [{<<"Account-ID">>, cb_context:account_id(Context)}
             ,{<<"Agent-ID">>, AgentId}
-            ,{<<"Start-Range">>, Yday}
+            ,{<<"Start-Range">>, From}
             ,{<<"End-Range">>, Now}
              | kz_api:default_headers(?APP_NAME, ?APP_VERSION)
             ]),
@@ -626,7 +611,23 @@ add_miss(Miss, Acc, QueueId) ->
 %%------------------------------------------------------------------------------
 -spec summary(cb_context:context()) -> cb_context:context().
 summary(Context) ->
-    crossbar_view:load(Context, ?CB_LIST ,[{'mapper', crossbar_view:get_value_fun()}]).
+%%    crossbar_view:load(Context, ?CB_LIST ,[{'mapper', crossbar_view:get_value_fun()}]).
+crossbar_view:load(Context, ?CB_LIST ,[{'mapper', fun normalize_view_results/2}]).
+
+%%------------------------------------------------------------------------------
+%% @private
+%% @doc Normalizes the resuts of a view
+%% @end
+%%------------------------------------------------------------------------------
+-spec normalize_view_results(kz_json:object(), kz_json:objects()) ->
+          kz_json:objects().
+normalize_view_results(JObj, Acc) ->
+    [kz_json:set_value(<<"id">>
+                      ,kz_doc:id(JObj)
+                      ,kz_json:get_value(<<"value">>, JObj)
+                      )
+     | Acc
+    ].
 
 -spec validate_status_change(cb_context:context()) -> cb_context:context().
 validate_status_change(Context) ->

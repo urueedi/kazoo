@@ -23,6 +23,7 @@
 
 %% API
 -export([start_link/4
+        ,member_call/3
         ,member_connect_req/4
         ,member_connect_re_req/1
         ,member_connect_win/3
@@ -59,7 +60,7 @@
                ,account_id :: kz_term:ne_binary()
 
                               %% PIDs of the gang
-               ,worker_sup :: pid()
+               ,worker_sup :: pid() | undefined
                ,mgr_pid :: pid()
                ,fsm_pid :: kz_term:api_pid()
                ,shared_pid :: kz_term:api_pid()
@@ -128,9 +129,14 @@ start_link(WorkerSup, MgrPid, AccountId, QueueId) ->
                            ,[WorkerSup, MgrPid, AccountId, QueueId]
                            ).
 
+-spec member_call(pid(), kz_json:object(), any()) -> 'ok'.
+member_call(Srv, MemberCallJObj, Delivery) ->
+    gen_listener:cast(Srv, {'member_call', MemberCallJObj, Delivery}).
+
 -spec member_connect_req(pid(), kz_json:object(), any(), kz_term:api_binary()) -> 'ok'.
 member_connect_req(Srv, MemberCallJObj, Delivery, Url) ->
     gen_listener:cast(Srv, {'member_connect_req', MemberCallJObj, Delivery, Url}).
+
 
 -spec member_connect_re_req(pid()) -> 'ok'.
 member_connect_re_req(Srv) ->
@@ -218,15 +224,13 @@ delivery(Srv) ->
 init([WorkerSup, MgrPid, AccountId, QueueId]) ->
     kz_log:put_callid(QueueId),
     lager:debug("starting queue ~s", [QueueId]),
-    AccountDb = kzs_util:format_account_db(AccountId),
-    {'ok', QueueJObj} = kz_datamgr:open_cache_doc(AccountDb, QueueId),
-    gen_listener:cast(self(), {'start_friends', QueueJObj}),
+    gen_listener:cast(self(), {'get_friends', WorkerSup}),
     {'ok', #state{queue_id = QueueId
                  ,account_id = AccountId
                  ,my_id = acdc_util:proc_id()
-                 ,worker_sup = WorkerSup
                  ,mgr_pid = MgrPid
                  }}.
+
 
 %%------------------------------------------------------------------------------
 %% @private
@@ -251,53 +255,41 @@ handle_call(_Request, _From, State) ->
 %%
 %% @end
 %%------------------------------------------------------------------------------
-find_pid_from_supervisor({'ok', P}) when is_pid(P) ->
-    {'ok', P};
-find_pid_from_supervisor({'error', {'already_started', P}}) when is_pid(P) ->
-    {'ok', P};
-find_pid_from_supervisor(E) -> E.
+-spec handle_cast(any(), state()) -> kz_types:handle_cast_ret_state(state()).
+handle_cast({'get_friends', WorkerSup}, State) ->
+    FSMPid = acdc_queue_worker_sup:fsm(WorkerSup),
+    lager:debug("got queue FSM: ~p", [FSMPid]),
+    SharedPid = acdc_queue_worker_sup:shared_queue(WorkerSup),
+    lager:debug("got shared queue listener: ~p", [SharedPid]),
+    {'noreply', State#state{fsm_pid=FSMPid
+                           ,shared_pid=SharedPid
+                           }};
 
--spec start_shared_queue(state(), pid(), kz_term:api_integer()) -> {'noreply', state()}.
-start_shared_queue(#state{account_id=AccountId
-                         ,queue_id=QueueId
-                         ,worker_sup=WorkerSup
-                         }=State, FSMPid, Priority) ->
-    {'ok', SharedPid} =
-        find_pid_from_supervisor(
-          acdc_queue_worker_sup:start_shared_queue(WorkerSup, FSMPid, AccountId, QueueId, Priority)
-         ),
-    lager:debug("started shared queue listener: ~p", [SharedPid]),
-
-    {'noreply', State#state{
-                  fsm_pid = FSMPid
-                 ,shared_pid = SharedPid
-                 ,my_id = acdc_util:proc_id(FSMPid)
-                 }}.
-
--spec handle_cast(any(), state()) -> kz_term:handle_cast_ret_state(state()).
-handle_cast({'start_friends', QueueJObj}, #state{queue_id=QueueId
-                                                ,account_id=AccountId
-                                                ,worker_sup=WorkerSup
-                                                ,mgr_pid=MgrPid
-                                                }=State) ->
-    Priority = acdc_util:max_priority(kzs_util:format_account_db(AccountId), QueueId),
-    case find_pid_from_supervisor(acdc_queue_worker_sup:start_fsm(WorkerSup, MgrPid, QueueJObj)) of
-        {'ok', FSMPid} ->
-            lager:debug("started queue FSM: ~p", [FSMPid]),
-            start_shared_queue(State, FSMPid, Priority);
-        {'error', 'already_present'} ->
-            lager:debug("queue FSM is already present"),
-            case acdc_queue_worker_sup:fsm(WorkerSup) of
-                FSMPid when is_pid(FSMPid) ->
-                    lager:debug("found queue FSM pid: ~p", [FSMPid]),
-                    start_shared_queue(State, FSMPid, Priority);
-                'undefined' ->
-                    lager:debug("no queue FSM pid found"),
-                    {'stop', 'failed_fsm', State}
-            end
-    end;
 handle_cast({'gen_listener', {'created_queue', Q}}, #state{my_q='undefined'}=State) ->
     {'noreply', State#state{my_q=Q}, 'hibernate'};
+
+handle_cast({'member_call', MemberCallJObj, Delivery}, #state{queue_id=QueueId
+                                                             ,account_id=AccountId
+                                                             }=State) ->
+    Call = kapps_call:from_json(kz_json:get_value(<<"Call">>, MemberCallJObj)),
+    CallId = kapps_call:call_id(Call),
+
+    kz_log:put_callid(CallId),
+
+    acdc_util:bind_to_call_events(Call),
+    lager:debug("bound to call events for ~s", [CallId]),
+
+    %% Be ready in case a cancel comes in while queue_listener is handling call
+    gen_listener:add_binding(self(), 'acdc_queue', [{'restrict_to', ['member_call_result']}
+                                                   ,{'account_id', AccountId}
+                                                   ,{'queue_id', QueueId}
+                                                   ,{'callid', CallId}
+                                                   ]),
+
+    {'noreply', State#state{call=Call
+                           ,delivery=Delivery
+                           ,member_call_queue=kz_json:get_value(<<"Server-ID">>, MemberCallJObj)
+                           }};
 
 handle_cast({'member_connect_req', MemberCallJObj, Delivery, _Url}
            ,#state{my_q=MyQ
@@ -334,6 +326,8 @@ handle_cast({'member_connect_req', MemberCallJObj, Delivery, _Url}
                            ,member_call_queue=kz_json:get_value(<<"Server-ID">>, MemberCallJObj)
                            }
     ,'hibernate'};
+
+
 handle_cast({'member_connect_re_req'}, #state{my_q=MyQ
                                              ,my_id=MyId
                                              ,account_id=AccountId
@@ -746,22 +740,18 @@ clear_call_state(#state{call=Call
 
 -spec publish(kz_term:api_terms(), kz_amqp_worker:publish_fun()) -> 'ok'.
 publish(Req, F) ->
-    case catch F(Req) of
-        'ok' -> 'ok';
-        {'EXIT', _R} ->
-            ST = erlang:get_stacktrace(),
-            lager:debug("failed to publish message: ~p", [_R]),
-            kz_log:log_stacktrace(ST),
-            'ok'
-    end.
+    try F(Req)
+    catch
+        ?STACKTRACE(_E, _R, ST)
+        lager:debug("failed to publish message: ~p:~p", [_E, _R]),
+        kz_log:log_stacktrace(ST)
+        end.
 
 -spec publish(kz_term:ne_binary(), kz_term:api_terms(), fun((kz_term:ne_binary(), kz_term:api_terms()) -> 'ok')) -> 'ok'.
 publish(Q, Req, F) ->
-    case catch F(Q, Req) of
-        'ok' -> 'ok';
-        {'EXIT', _R} ->
-            ST = erlang:get_stacktrace(),
-            lager:debug("failed to publish message to ~s: ~p", [Q, _R]),
-            kz_log:log_stacktrace(ST),
-            'ok'
-    end.
+    try F(Q, Req)
+    catch
+        ?STACKTRACE(_E, _R, ST)
+        lager:debug("failed to publish message to ~s: ~p:~p", [Q, _E, _R]),
+        kz_log:log_stacktrace(ST)
+        end.

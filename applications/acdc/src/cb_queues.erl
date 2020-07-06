@@ -60,7 +60,7 @@
 -define(MOD_CONFIG_CAT, <<(?CONFIG_CAT)/binary, ".queues">>).
 
 -define(CB_LIST, <<"queues/crossbar_listing">>).
--define(CB_AGENTS_LIST, <<"queues/agents_listing">>). %{agent_id, queue_id}
+-define(CB_AGENTS_LIST, <<"queues/agents_listing">>).
 
 -define(STATS_PATH_TOKEN, <<"stats">>).
 -define(STATS_SUMMARY_PATH_TOKEN, <<"stats_summary">>).
@@ -183,7 +183,8 @@ content_types_provided(Context, ?STATS_PATH_TOKEN) ->
                                          ,[{'to_json', ?JSON_CONTENT_TYPES}
                                           ,{'to_csv', ?CSV_CONTENT_TYPES}
                                           ]);
-content_types_provided(Context, ?STATS_SUMMARY_PATH_TOKEN) -> Context.
+content_types_provided(Context, ?STATS_SUMMARY_PATH_TOKEN) -> Context;
+content_types_provided(Context, _) -> Context.
 
 %%------------------------------------------------------------------------------
 %% @doc Check the request (request body, query string params, path tokens, etc)
@@ -570,7 +571,9 @@ load_queue_agents(Id, Context) ->
     end.
 
 load_agent_roster(Id, Context) ->
-    crossbar_view:load(Context, ?CB_AGENTS_LIST, [{'key', Id},{'mapper', crossbar_view:get_value_fun()}]).
+    crossbar_view:load(Context, ?CB_AGENTS_LIST, [{'key', Id}
+                                                  ,{'reduce', 'false'}
+                                                  ,{'mapper', fun  normalize_agents_results/2}]).
 
 add_queue_to_agents(Id, Context) ->
     add_queue_to_agents(Id, Context, cb_context:req_data(Context)).
@@ -807,10 +810,15 @@ fetch_ranged_queue_stats(Context, From, To, 'false') ->
 -spec fetch_all_current_queue_stats(cb_context:context()) -> cb_context:context().
 fetch_all_current_queue_stats(Context) ->
     lager:debug("querying for all recent stats"),
+    Now = kz_time:now_s(),
+    From = Now - min(?SECONDS_IN_DAY, ?ACDC_CLEANUP_WINDOW),
+
     Req = props:filter_undefined(
             [{<<"Account-ID">>, cb_context:account_id(Context)}
             ,{<<"Status">>, cb_context:req_value(Context, <<"status">>)}
             ,{<<"Agent-ID">>, cb_context:req_value(Context, <<"agent_id">>)}
+            ,{<<"Start-Range">>, From}
+            ,{<<"End-Range">>, Now}
              | kz_api:default_headers(?APP_NAME, ?APP_VERSION)
             ]),
     fetch_from_amqp(Context, Req).
@@ -853,6 +861,9 @@ fetch_from_amqp(Context, Req) ->
 -spec summary(cb_context:context()) -> cb_context:context().
 summary(Context) ->
     crossbar_view:load(Context, ?CB_LIST ,[{'mapper', crossbar_view:get_value_fun()}]).
+
+normalize_agents_results(JObj, Acc) ->
+    [kz_doc:id(JObj) | Acc].
 
 %%------------------------------------------------------------------------------
 %% @private

@@ -177,7 +177,10 @@ maybe_stop_agent(AccountId, AgentId, JObj) ->
 
     end.
 
-maybe_pause_agent(AccountId, AgentId, Timeout, Alias, JObj) when is_integer(Timeout) ->
+maybe_pause_agent(AccountId, AgentId, <<"infinity">>, Alias, JObj) ->
+    maybe_pause_agent(AccountId, AgentId, 'infinity', Alias, JObj);
+maybe_pause_agent(AccountId, AgentId, Timeout, Alias, JObj) when is_integer(Timeout)
+                                                                orelse Timeout =:= 'infinity' ->
     case acdc_agents_sup:find_agent_supervisor(AccountId, AgentId) of
         'undefined' -> lager:debug("agent ~s (~s) not found, nothing to do", [AgentId, AccountId]);
         Sup when is_pid(Sup) ->
@@ -320,13 +323,13 @@ handle_destroyed_channel(JObj, AccountId) ->
 get_to_user(JObj) ->
     case kz_json:is_defined(<<"To-Uri">>, JObj) of
         true -> hd(binary:split(kz_json:get_value(<<"To-Uri">>, JObj), <<"@">>));
-        false -> get_to_or_destination_number(JObj)
+        false -> get_username_or_destination_number(JObj)
     end.
 
--spec get_to_or_destination_number(kz_json:object()) -> kz_term:api_binary().
-get_to_or_destination_number(JObj) ->
-    case kz_json:is_defined(<<"To">>, JObj) of
-        true -> hd(binary:split(kz_json:get_value(<<"To">>, JObj), <<"@">>));
+-spec get_username_or_destination_number(kz_json:object()) -> kz_term:api_binary().
+get_username_or_destination_number(JObj) ->
+    case kz_json:is_defined([<<"Custom-Channel-Vars">>,<<"Username">>], JObj) of
+        true -> kz_json:get_ne_value([<<"Custom-Channel-Vars">>,<<"Username">>], JObj);
         false -> kz_json:get_value(<<"Caller-Destination-Number">>, JObj)
     end.
 
@@ -479,12 +482,9 @@ handle_agent_change(AccountDb, AccountId, AgentId, ?DOC_EDITED) ->
         P when is_pid(P) -> acdc_agent_fsm:refresh(acdc_agent_sup:fsm(P), JObj)
     end;
 handle_agent_change(_, AccountId, AgentId, ?DOC_DELETED) ->
-    case acdc_agents_sup:find_agent_supervisor(AccountId, AgentId) of
-        'undefined' -> lager:debug("user ~s has left us, but wasn't started", [AgentId]);
-        P when is_pid(P) ->
-            lager:debug("agent ~s(~s) has been deleted, stopping ~p", [AccountId, AgentId, P]),
-            _ = acdc_agent_sup:stop(P),
-            acdc_agent_stats:agent_logged_out(AccountId, AgentId)
+    case acdc_agents_sup:stop_agent(AccountId, AgentId) of
+        'ok' -> acdc_agent_stats:agent_logged_out(AccountId, AgentId);
+        _ -> 'ok'
     end.
 
 -spec handle_presence_probe(kz_json:object(), kz_term:proplist()) -> 'ok'.

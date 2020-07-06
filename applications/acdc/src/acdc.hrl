@@ -12,10 +12,11 @@
 
 -define(CACHE_NAME, 'acdc_cache').
 
--define(ABANDON_TIMEOUT, 'member_timeout').
--define(ABANDON_EXIT, 'member_exit').
--define(ABANDON_HANGUP, 'member_hangup').
--define(ABANDON_EMPTY, 'member_exit_empty').
+-define(ABANDON_TIMEOUT, <<"member_timeout">>).
+-define(ABANDON_EXIT, <<"member_exit">>).
+-define(ABANDON_HANGUP, <<"member_hangup">>).
+-define(ABANDON_EMPTY, <<"member_exit_empty">>).
+-define(ABANDON_INTERNAL_ERROR, <<"INTERNAL ERROR">>).
 
 -define(PRESENCE_GREEN, <<"terminated">>).
 -define(PRESENCE_RED_FLASH, <<"early">>).
@@ -34,9 +35,6 @@
 
 -define(DESTROYED_CHANNEL_REG(AccountId, User), {'p', 'l', {'destroyed_channel', AccountId, User}}).
 -define(DESTROYED_CHANNEL(CallId, HangupCause), {'call_down', CallId, HangupCause}).
-
--type abandon_reason() :: ?ABANDON_TIMEOUT | ?ABANDON_EXIT |
-                          ?ABANDON_HANGUP.
 
 -type deliveries() :: [gen_listener:basic_deliver()].
 
