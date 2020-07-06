@@ -13,7 +13,7 @@
 -behaviour(gen_listener).
 
 %% API
--export([start_link/2, start_link/3, start_link/5
+-export([start_link/3, start_link/4, start_link/5
         ,member_connect_resp/2
         ,member_connect_retry/2
         ,member_connect_accepted/1, member_connect_accepted/2, member_connect_accepted/3
@@ -41,15 +41,12 @@
         ,add_acdc_queue/3
         ,rm_acdc_queue/2
         ,call_status_req/1, call_status_req/2
-        ,stop/1
         ,fsm_started/2
-        ,add_endpoint_bindings/3, remove_endpoint_bindings/3
         ,outbound_call_id/2
         ,remove_cdr_urls/2
         ,logout_agent/1
         ,agent_info/2
         ,maybe_update_presence_id/2
-        ,maybe_update_presence_state/2
         ,presence_update/2
         ,update_agent_status/2
         ]).
@@ -81,11 +78,11 @@
                ,original_call :: kapps_call:call()
                ,acdc_queue_id :: api_kz_term:ne_binary() % the ACDc Queue ID
                ,msg_queue_id :: api_kz_term:ne_binary() % the AMQP Queue ID of the ACDc Queue process
-               ,agent_id :: api_kz_term:ne_binary()
+               ,agent_id :: kz_term:api_ne_binary()
                ,agent_priority :: agent_priority()
                ,skills :: kz_term:ne_binaries() % skills this agent has
-               ,acct_db :: api_kz_term:ne_binary()
-               ,acct_id :: api_kz_term:ne_binary()
+               ,acct_db :: kz_term:api_ne_binary()
+               ,acct_id :: kz_term:api_binary()
                ,fsm_pid :: kz_term:api_pid()
                ,agent_queues = [] :: kz_term:ne_binaries()
                ,last_connect :: kz_term:kz_now() | undefined % last connection
@@ -178,15 +175,8 @@
 %% @doc Starts the server
 %% @end
 %%------------------------------------------------------------------------------
--spec start_link(pid(), kz_json:object()) -> kz_term:startlink_ret().
-start_link(Supervisor, AgentJObj) ->
-    AgentId = kz_doc:id(AgentJObj),
-    AccountId = account_id(AgentJObj),
-    Queues = kz_json:get_value(<<"queues">>, AgentJObj, []),
-    start_link(Supervisor, AgentJObj, AccountId, AgentId, Queues).
-
--spec start_link(pid(), kz_json:object(), kz_term:ne_binary(), kz_term:ne_binary(), kz_term:ne_binaries()) -> kz_term:startlink_ret().
-start_link(Supervisor, AgentJObj, AccountId, AgentId, Queues) ->
+-spec start_link(pid(), kz_term:ne_binary(), kz_term:ne_binary(), kz_json:object(), kz_term:ne_binaries()) -> kz_types:startlink_ret().
+start_link(Supervisor, AccountId, AgentId, AgentJObj, Queues) ->
     lager:debug("start bindings for ~s(~s) in ready", [AccountId, AgentId]),
     gen_listener:start_link(?SERVER
                            ,[{'bindings', ?BINDINGS(AccountId, AgentId)}
@@ -194,6 +184,11 @@ start_link(Supervisor, AgentJObj, AccountId, AgentId, Queues) ->
                             ]
                            ,[Supervisor, AgentJObj, Queues]
                            ).
+
+-spec start_link(pid(), kz_term:ne_binary(), kz_term:ne_binary(), kz_json:object()) -> kz_types:startlink_ret().
+start_link(Supervisor, AccountId, AgentId, AgentJObj) ->
+    Queues = kz_json:get_value(<<"queues">>, AgentJObj, []),
+    start_link(Supervisor, AccountId, AgentId, AgentJObj, Queues).
 
 -spec start_link(pid(), kapps_call:call(), kz_term:ne_binary()) -> kz_term:startlink_ret().
 start_link(Supervisor, ThiefCall, QueueId) ->
@@ -207,9 +202,6 @@ start_link(Supervisor, ThiefCall, QueueId) ->
                             ]
                            ,[Supervisor, ThiefCall, [QueueId]]
                            ).
-
--spec stop(pid()) -> 'ok'.
-stop(Srv) -> gen_listener:cast(Srv, {'stop_agent', self()}).
 
 -spec member_connect_resp(pid(), kz_json:object()) -> 'ok'.
 member_connect_resp(Srv, ReqJObj) ->
@@ -347,22 +339,6 @@ call_status_req(Srv, CallId) ->
 fsm_started(Srv, FSM) ->
     gen_listener:cast(Srv, {'fsm_started', FSM}).
 
--spec add_endpoint_bindings(pid(), kz_term:ne_binary(), api_kz_term:ne_binary()) -> 'ok'.
-add_endpoint_bindings(_Srv, _Realm, 'undefined') ->
-    lager:debug("ignoring adding endpoint bindings for undefined user @ ~s", [_Realm]);
-add_endpoint_bindings(Srv, Realm, User) ->
-    lager:debug("adding route bindings to ~p for endpoint ~s@~s", [Srv, User, Realm]),
-    gen_listener:add_binding(Srv, 'route', [{'realm', Realm}
-                                           ,{'user', User}
-                                           ]).
-
--spec remove_endpoint_bindings(pid(), kz_term:ne_binary(), kz_term:ne_binary()) -> 'ok'.
-remove_endpoint_bindings(Srv, Realm, User) ->
-    lager:debug("removing route bindings to ~p for endpoint ~s@~s", [Srv, User, Realm]),
-    gen_listener:rm_binding(Srv, 'route', [{'realm', Realm}
-                                          ,{'user', User}
-                                          ]).
-
 -spec remove_cdr_urls(pid(), kz_term:ne_binary()) -> 'ok'.
 remove_cdr_urls(Srv, CallId) -> gen_listener:cast(Srv, {'remove_cdr_urls', CallId}).
 
@@ -373,11 +349,6 @@ logout_agent(Srv) -> gen_listener:cast(Srv, 'logout_agent').
 maybe_update_presence_id(_Srv, 'undefined') -> 'ok';
 maybe_update_presence_id(Srv, Id) ->
     gen_listener:cast(Srv, {'presence_id', Id}).
-
--spec maybe_update_presence_state(pid(), api_kz_term:ne_binary()) -> 'ok'.
-maybe_update_presence_state(_Srv, 'undefined') -> 'ok';
-maybe_update_presence_state(Srv, State) ->
-    presence_update(Srv, State).
 
 -spec presence_update(pid(), api_kz_term:ne_binary()) -> 'ok'.
 presence_update(_, 'undefined') -> 'ok';
@@ -492,10 +463,6 @@ handle_cast({'refresh_config', JObj, StateName}, #state{agent_priority=Priority0
     {'noreply', State#state{agent_priority=Priority
                            ,skills=Skills
                            }};
-handle_cast({'stop_agent', Req}, #state{supervisor=Supervisor}=State) ->
-    lager:debug("stop agent requested by ~p", [Req]),
-    _ = kz_process:spawn(fun acdc_agent_sup:stop/1, [Supervisor]),
-    {'noreply', State};
 
 handle_cast({'fsm_started', FSMPid}, State) ->
     lager:debug("fsm started: ~p", [FSMPid]),
@@ -580,8 +547,7 @@ handle_cast({'channel_hungup', CallId}, #state{call=Call
                     ,'hibernate'};
                 'true' ->
                     lager:debug("thief is done, going down"),
-                    stop(self()),
-                    {'noreply', State}
+                    {'stop', 'normal', State}
             end;
         _ ->
             case props:get_value(CallId, ACallIds) of
@@ -852,8 +818,9 @@ handle_cast({'member_callback_accepted', ACall}, #state{msg_queue_id=AmqpQueue
 
     send_member_callback_accepted(AmqpQueue, call_id(Call), AccountId, AgentId, MyId),
 
-    ACall1 = kapps_call:set_control_queue(props:get_value(ACallId, ACallIds), ACall),
-    kapps_call_command:prompt(<<"queue-now_calling_back">>, ACall1),
+    CtrlQ = props:get_value(ACallId, ACallIds),
+    ACall1 = kapps_call:set_control_queue(CtrlQ, ACall),
+    kapps_call_command:audio_macro([{'prompt', <<"queue-now_calling_back">>}], ACall1),
 
     {'noreply', State#state{agent_call_ids=ACallIds1}, 'hibernate'};
 
@@ -1096,6 +1063,8 @@ terminate(Reason, #state{agent_queues=Queues
                         }
          ) when Reason == 'normal'; Reason == 'shutdown' ->
     _ = [rm_queue_binding(AccountId, AgentId, QueueId) || QueueId <- Queues],
+    Reason =:= 'normal' %% Prevent race condition of supervisor delete_child/restart_child
+        andalso kz_process:spawn(fun acdc_agents_sup:stop_agent/2, [AccountId, AgentId]),
     lager:debug("agent process going down: ~p", [Reason]);
 terminate(_Reason, _State) ->
     lager:debug("agent process going down: ~p", [_Reason]).
@@ -1596,28 +1565,28 @@ recording_format() ->
 
 -spec agent_id(agent()) -> kz_term:api_binary().
 agent_id(Agent) ->
-    case kz_json:is_json_object(Agent) of
-        'true' -> kz_doc:id(Agent);
-        'false' -> kapps_call:owner_id(Agent)
+    case is_thief(Agent) of
+        'true' -> kapps_call:owner_id(Agent);
+        'false' -> kz_doc:id(Agent)
     end.
 
 -spec account_id(agent()) -> kz_term:api_binary().
 account_id(Agent) ->
-    case kz_json:is_json_object(Agent) of
-        'true' -> find_account_id(Agent);
-        'false' -> kapps_call:account_id(Agent)
+    case is_thief(Agent) of
+        'true' -> kapps_call:account_id(Agent);
+        'false' -> find_account_id(Agent)
     end.
 
 -spec account_db(agent()) -> kz_term:api_binary().
 account_db(Agent) ->
-    case kz_json:is_json_object(Agent) of
-        'true' -> kz_doc:account_db(Agent);
-        'false' -> kapps_call:account_db(Agent)
+    case is_thief(Agent) of
+        'true' -> kapps_call:account_db(Agent);
+        'false' -> kz_doc:account_db(Agent)
     end.
 
 -spec record_calls(agent()) -> boolean().
 record_calls(Agent) ->
-    kz_json:is_json_object(Agent)
+    not is_thief(Agent)
         andalso kz_json:is_true(<<"record_calls">>, Agent, 'false').
 
 -spec is_thief(agent()) -> boolean().
@@ -1636,6 +1605,7 @@ stop_agent_leg(ACallId, ACtrlQ) ->
     lager:debug("sending hangup to ~s: ~s", [ACallId, ACtrlQ]),
     kapi_dialplan:publish_command(ACtrlQ, Command).
 
+-spec find_account_id(kz_json:object()) -> kz_term:api_ne_binary().
 find_account_id(JObj) ->
     case kz_doc:account_id(JObj) of
         'undefined' -> kzs_util:format_account_id(kz_doc:account_db(JObj));

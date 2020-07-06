@@ -38,7 +38,6 @@
                      ,config_data = []  :: kz_term:proplist()
                      ,breakout_media    :: kz_term:api_object()
                      ,max_wait = 60 * ?MILLISECONDS_IN_SECOND :: max_wait()
-                     ,silence_noop      :: kz_term:api_binary()
                      ,enter_as_callback :: boolean()
                      ,queue_jobj        :: kz_json:object()
                      }).
@@ -148,15 +147,15 @@ maybe_enter_queue(#member_call{call=Call
 maybe_enter_queue(#member_call{call=Call
                               ,queue_id=QueueId
                               ,max_wait=MaxWait
+                              ,config_data=MemberCall
                               }=MC
                  ,'false') ->
     case kapps_call_command:b_channel_status(kapps_call:call_id(Call)) of
         {'ok', _} ->
             lager:info("asking for an agent, waiting up to ~p ms", [MaxWait]),
-
-            NoopId = kapps_call_command:flush_dtmf(Call),
+            cf_exe:amqp_send(Call, MemberCall, fun kapi_acdc_queue:publish_member_call/1),
+            _ = kapps_call_command:flush_dtmf(Call),
             wait_for_bridge(MC#member_call{call=kapps_call:kvs_store('queue_id', QueueId, Call)
-                                          ,silence_noop=NoopId
                                           }
                            ,#breakout_state{}
                            ,MaxWait
@@ -241,18 +240,6 @@ process_message(#member_call{call=Call}, _, _, Start, _Wait, _JObj, {<<"call_eve
     lager:info("member hungup while waiting in the queue (was there ~b s)", [kz_time:elapsed_s(Start)]),
     cancel_member_call(Call, ?MEMBER_HANGUP),
     cf_exe:stop(Call);
-process_message(#member_call{call=Call
-                            ,config_data=MemberCall
-                            ,silence_noop=NoopId
-                            }=MC, BreakoutState, Timeout, Start, Wait, JObj, {<<"call_event">>,<<"CHANNEL_EXECUTE_COMPLETE">>}) ->
-    case kz_json:get_first_defined([<<"Application-Name">>
-                                   ,[<<"Request">>, <<"Application-Name">>]
-                                   ], JObj) =:= <<"noop">>
-        andalso kz_json:get_value(<<"Application-Response">>, JObj) =:= NoopId of
-        'true' -> cf_exe:amqp_send(Call, MemberCall, fun kapi_acdc_queue:publish_member_call/1);
-        'false' -> 'ok'
-    end,
-    wait_for_bridge(MC, BreakoutState, kz_time:decr_timeout(Timeout, Wait), Start);
 process_message(#member_call{call=Call
                             ,queue_id=QueueId
                             }=MC, BreakoutState, Timeout, Start, Wait, JObj, {<<"member">>, <<"call_fail">>}) ->

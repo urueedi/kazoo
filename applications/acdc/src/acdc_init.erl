@@ -23,6 +23,8 @@
 
 -include("acdc.hrl").
 
+-define(CB_AGENTS_LIST, <<"queues/agents_listing">>).
+
 -spec start_link() -> 'ignore'.
 start_link() ->
     _ = declare_exchanges(),
@@ -87,7 +89,8 @@ init_acct_queues(AccountDb, AccountId) ->
 -spec init_acct_agents(kz_term:ne_binary(), kz_term:ne_binary()) -> any().
 init_acct_agents(AccountDb, AccountId) ->
     init_agents(AccountId
-               ,kz_datamgr:get_results(AccountDb, <<"queues/agents_listing">>, [])
+               ,kz_datamgr:get_results(AccountDb, ?CB_AGENTS_LIST
+                    ,[{'reduce', 'false'}])
                ).
 
 -spec init_queues(kz_term:ne_binary(), kazoo_data:get_results_return()) -> any().

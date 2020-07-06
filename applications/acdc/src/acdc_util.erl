@@ -29,6 +29,8 @@
 
 -include("acdc.hrl").
 
+-define(CB_AGENTS_LIST, <<"queues/agents_listing">>).
+
 -define(CALL_EVENT_RESTRICTIONS, ['CHANNEL_CREATE'
                                  ,'CHANNEL_ANSWER'
                                  ,'CHANNEL_BRIDGE', 'CHANNEL_UNBRIDGE'
@@ -36,7 +38,6 @@
                                  ,'CHANNEL_DESTROY'
                                  ,'DTMF'
                                  ,'CHANNEL_EXECUTE_COMPLETE'
-                                 ,'PLAYBACK_STOP'
                                  ,'usurp_control'
                                  ]).
 
@@ -88,12 +89,15 @@ send_cdr(Url, JObj, Retries) ->
     end.
 
 %% Returns the list of agents configured for the queue
--spec agents_in_queue(kz_term:ne_binary(), kz_term:ne_binary()) -> kz_json:path().
+-spec agents_in_queue(kz_term:ne_binary(), kz_term:ne_binary()) -> kz_json:objects().
 agents_in_queue(AcctDb, QueueId) ->
-    case kz_datamgr:get_results(AcctDb, <<"queues/agents_listing">>, [{'key', QueueId}]) of
-        {'ok', []} -> [];
+    case kz_datamgr:get_results(AcctDb, ?CB_AGENTS_LIST
+                               ,[{'key', QueueId}
+                                ,{'reduce', 'false'}
+                                ])
+    of
         {'error', _E} -> lager:debug("failed to lookup agents for ~s: ~p", [QueueId, _E]), [];
-        {'ok', As} -> [kz_json:get_value(<<"value">>, A) || A <- As]
+        {'ok', As} -> As
     end.
 
 -spec agent_devices(kz_term:ne_binary(), kz_term:ne_binary()) -> kz_json:objects().

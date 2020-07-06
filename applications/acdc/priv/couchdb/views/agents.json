@@ -20,6 +20,7 @@
                 "    'first_name': doc.first_name,",
                 "    'last_name': doc.last_name,",
                 "    'queues': doc.queues,",
+                "    'agent_priority': doc.acdc_agent_priority || 0,",
                 "    'skills': doc.acdc_skills || []",
                 "  });",
                 "}"

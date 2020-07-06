@@ -57,7 +57,7 @@ maybe_start_announcements(Manager, Call, Props) ->
 %%
 %% @end
 %%------------------------------------------------------------------------------
--spec stop_announcements(pid()) -> 'ok' | {'error', atom()}.
+-spec stop_announcements(pid()) -> kz_types:sup_terminatechild_ret().
 stop_announcements(Pid) ->
     supervisor:terminate_child(?SERVER, Pid).
 

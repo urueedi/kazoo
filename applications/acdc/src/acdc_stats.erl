@@ -103,7 +103,7 @@ call_waiting(AccountId, QueueId, CallId, CallerIdName, CallerIdNumber, CallerPri
              ,{<<"Caller-Priority">>, CallerPriority}
               | kz_api:default_headers(?APP_NAME, ?APP_VERSION)
              ]),
-    edr_log_queue_event(AccountId, <<"call_waiting">>, Prop),
+    call_state_change(AccountId, <<"call_waiting">>, Prop),
     kz_amqp_worker:cast(Prop, fun kapi_acdc_stats:publish_call_waiting/1).
 
 -spec call_waiting(kz_term:api_binary()
@@ -128,10 +128,10 @@ call_waiting(AccountId, QueueId, Position, CallId, CallerIdName, CallerIdNumber,
              ,{<<"Required-Skills">>, RequiredSkills}
               | kz_api:default_headers(?APP_NAME, ?APP_VERSION)
              ]),
-    edr_log_queue_event(AccountId, <<"call_waiting">>, Prop),
+    call_state_change(AccountId, <<"call_waiting">>, Prop),
     kz_amqp_worker:cast(Prop, fun kapi_acdc_stats:publish_call_waiting/1).
 
--spec call_abandoned(kz_term:ne_binary(), kz_term:ne_binary(), kz_term:ne_binary(), kz_term:ne_binary()) -> 'ok' | {'error', any()}.
+-spec call_abandoned(kz_term:ne_binary(), kz_term:ne_binary(), kz_term:ne_binary(), kz_term:ne_binary()) -> 'ok'.
 call_abandoned(AccountId, QueueId, CallId, Reason) ->
     Prop = props:filter_undefined(
              [{<<"Account-ID">>, AccountId}
@@ -141,7 +141,7 @@ call_abandoned(AccountId, QueueId, CallId, Reason) ->
              ,{<<"Abandon-Timestamp">>, kz_time:current_tstamp()}
               | kz_api:default_headers(?APP_NAME, ?APP_VERSION)
              ]),
-    edr_log_queue_event(AccountId, <<"call_abandoned">>, Prop),
+    call_state_change(AccountId, <<"call_abandoned">>, Prop),
     kz_amqp_worker:cast(Prop, fun kapi_acdc_stats:publish_call_abandoned/1).
 
 -spec call_marked_callback(kz_term:ne_binary()
@@ -157,7 +157,7 @@ call_marked_callback(AccountId, QueueId, CallId, CallerIdName) ->
              ,{<<"Caller-ID-Name">>, CallerIdName}
               | kz_api:default_headers(?APP_NAME, ?APP_VERSION)
              ]),
-    edr_log_queue_event(AccountId, <<"call_marked_callback">>, Prop),
+    call_state_change(AccountId, <<"call_marked_callback">>, Prop),
     kz_amqp_worker:cast(
       Prop
      ,fun kapi_acdc_stats:publish_call_marked_callback/1
@@ -173,7 +173,7 @@ call_handled(AccountId, QueueId, CallId, AgentId) ->
              ,{<<"Handled-Timestamp">>, kz_time:current_tstamp()}
               | kz_api:default_headers(?APP_NAME, ?APP_VERSION)
              ]),
-    edr_log_queue_event(AccountId, <<"call_handled">>, Prop),
+    call_state_change(AccountId, <<"call_handled">>, Prop),
     kz_amqp_worker:cast(Prop, fun kapi_acdc_stats:publish_call_handled/1).
 
 -spec call_missed(kz_term:ne_binary(), kz_term:ne_binary(), kz_term:ne_binary(), kz_term:ne_binary(), kz_term:ne_binary()) -> 'ok' | {'error', any()}.
@@ -187,7 +187,7 @@ call_missed(AccountId, QueueId, AgentId, CallId, ErrReason) ->
              ,{<<"Miss-Timestamp">>, kz_time:current_tstamp()}
               | kz_api:default_headers(?APP_NAME, ?APP_VERSION)
              ]),
-    edr_log_queue_event(AccountId, <<"call_missed">>, Prop),
+    call_state_change(AccountId, <<"call_missed">>, Prop),
     kz_amqp_worker:cast(Prop, fun kapi_acdc_stats:publish_call_missed/1).
 
 -spec call_processed(kz_term:ne_binary(), kz_term:ne_binary(), kz_term:ne_binary(), kz_term:ne_binary(), kz_term:ne_binary()) -> 'ok' | {'error', any()}.
@@ -201,7 +201,7 @@ call_processed(AccountId, QueueId, AgentId, CallId, Initiator) ->
              ,{<<"Hung-Up-By">>, Initiator}
               | kz_api:default_headers(?APP_NAME, ?APP_VERSION)
              ]),
-    edr_log_queue_event(AccountId, <<"call_processed">>, Prop),
+    call_state_change(AccountId, <<"call_processed">>, Prop),
     kz_amqp_worker:cast(Prop, fun kapi_acdc_stats:publish_call_processed/1).
 
 -spec agent_ready(kz_term:ne_binary(), kz_term:ne_binary()) -> 'ok' | {'error', any()}.
@@ -213,7 +213,7 @@ agent_ready(AccountId, AgentId) ->
              ,{<<"Status">>, <<"ready">>}
               | kz_api:default_headers(?APP_NAME, ?APP_VERSION)
              ]),
-    edr_log_queue_event(AccountId, <<"agent_ready">>, Prop),
+    call_state_change(AccountId, <<"agent_ready">>, Prop),
     kz_amqp_worker:cast(Prop, fun kapi_acdc_stats:publish_status_ready/1).
 
 -spec agent_logged_in(kz_term:ne_binary(), kz_term:ne_binary()) -> 'ok' | {'error', any()}.
@@ -225,7 +225,7 @@ agent_logged_in(AccountId, AgentId) ->
              ,{<<"Status">>, <<"logged_in">>}
               | kz_api:default_headers(?APP_NAME, ?APP_VERSION)
              ]),
-    edr_log_queue_event(AccountId, <<"agent_logged_in">>, Prop),
+    call_state_change(AccountId, <<"agent_logged_in">>, Prop),
     kz_amqp_worker:cast(Prop, fun kapi_acdc_stats:publish_status_logged_in/1).
 
 -spec agent_logged_out(kz_term:ne_binary(), kz_term:ne_binary()) -> 'ok' | {'error', any()}.
@@ -237,7 +237,7 @@ agent_logged_out(AccountId, AgentId) ->
              ,{<<"Status">>, <<"logged_out">>}
               | kz_api:default_headers(?APP_NAME, ?APP_VERSION)
              ]),
-    edr_log_queue_event(AccountId, <<"agent_logged_out">>, Prop),
+    call_state_change(AccountId, <<"agent_logged_out">>, Prop),
     kz_amqp_worker:cast(Prop, fun kapi_acdc_stats:publish_status_logged_out/1).
 
 -spec agent_connecting(kz_term:ne_binary(), kz_term:ne_binary(), kz_term:ne_binary()) -> 'ok' | {'error', any()}.
@@ -256,7 +256,7 @@ agent_connecting(AccountId, AgentId, CallId, CallerIDName, CallerIDNumber) ->
              ,{<<"Caller-ID-Number">>, CallerIDNumber}
               | kz_api:default_headers(?APP_NAME, ?APP_VERSION)
              ]),
-    edr_log_queue_event(AccountId, <<"agent_connecting">>, Prop),
+    call_state_change(AccountId, <<"agent_connecting">>, Prop),
     kz_amqp_worker:cast(Prop, fun kapi_acdc_stats:publish_status_connecting/1).
 
 -spec agent_connected(kz_term:ne_binary(), kz_term:ne_binary(), kz_term:ne_binary()) -> 'ok' | {'error', any()}.
@@ -275,7 +275,7 @@ agent_connected(AccountId, AgentId, CallId, CallerIDName, CallerIDNumber) ->
              ,{<<"Caller-ID-Number">>, CallerIDNumber}
               | kz_api:default_headers(?APP_NAME, ?APP_VERSION)
              ]),
-    edr_log_queue_event(AccountId, <<"agent_connected">>, Prop),
+    call_state_change(AccountId, <<"agent_connected">>, Prop),
     kz_amqp_worker:cast(Prop, fun kapi_acdc_stats:publish_status_connected/1).
 
 -spec agent_wrapup(kz_term:ne_binary(), kz_term:ne_binary(), pos_integer()) -> 'ok' | {'error', any()}.
@@ -288,7 +288,7 @@ agent_wrapup(AccountId, AgentId, WaitTime) ->
              ,{<<"Wait-Time">>, WaitTime}
               | kz_api:default_headers(?APP_NAME, ?APP_VERSION)
              ]),
-    edr_log_queue_event(AccountId, <<"agent_wrapup">>, Prop),
+    call_state_change(AccountId, <<"agent_wrapup">>, Prop),
     kz_amqp_worker:cast(Prop, fun kapi_acdc_stats:publish_status_wrapup/1).
 
 -spec agent_paused(kz_term:ne_binary(), kz_term:ne_binary(), kz_term:api_pos_integer(), kz_term:api_binary()) -> 'ok' | {'error', any()}.
@@ -304,7 +304,7 @@ agent_paused(AccountId, AgentId, PauseTime, Alias) ->
              ,{<<"Pause-Alias">>, Alias}
               | kz_api:default_headers(?APP_NAME, ?APP_VERSION)
              ]),
-    edr_log_queue_event(AccountId, <<"agent_paused">>, Prop),
+    call_state_change(AccountId, <<"agent_paused">>, Prop),
     kz_amqp_worker:cast(Prop, fun kapi_acdc_stats:publish_status_paused/1).
 
 -spec agent_outbound(kz_term:ne_binary(), kz_term:ne_binary(), kz_term:ne_binary()) -> 'ok' | {'error', any()}.
@@ -317,7 +317,7 @@ agent_outbound(AccountId, AgentId, CallId) ->
              ,{<<"Call-ID">>, CallId}
               | kz_api:default_headers(?APP_NAME, ?APP_VERSION)
              ]),
-    edr_log_queue_event(AccountId, <<"agent_outbound">>, Prop),
+    call_state_change(AccountId, <<"agent_outbound">>, Prop),
     kz_amqp_worker:cast(Prop, fun kapi_acdc_stats:publish_status_outbound/1).
 
 -spec agent_statuses() -> kz_term:ne_binaries().
@@ -786,8 +786,9 @@ call_match_builder_fold(<<"Status">>, Status, {CallStat, Contstraints}) ->
 call_match_builder_fold(<<"Start-Range">>, Start, {CallStat, Contstraints}) ->
     Now = kz_time:current_tstamp(),
     Past = Now - ?CLEANUP_WINDOW,
+    Start1 = acdc_stats_util:apply_query_window_wiggle_room(Start, Past),
 
-    try kz_term:to_integer(Start) of
+    try kz_term:to_integer(Start1) of
         N when N < Past ->
             {'error', kz_json:from_list([{<<"Start-Range">>, <<"supplied value is too far in the past">>}
                                         ,{<<"Window-Size">>, ?CLEANUP_WINDOW}
@@ -809,8 +810,9 @@ call_match_builder_fold(<<"Start-Range">>, Start, {CallStat, Contstraints}) ->
 call_match_builder_fold(<<"End-Range">>, End, {CallStat, Contstraints}) ->
     Now = kz_time:current_tstamp(),
     Past = Now - ?CLEANUP_WINDOW,
+    End1 = acdc_stats_util:apply_query_window_wiggle_room(End, Past),
 
-    try kz_term:to_integer(End) of
+    try kz_term:to_integer(End1) of
         N when N < Past ->
             {'error', kz_json:from_list([{<<"End-Range">>, <<"supplied value is too far in the past">>}
                                         ,{<<"Window-Size">>, ?CLEANUP_WINDOW}
@@ -1635,9 +1637,12 @@ maybe_send_summary_stat(#call_stat{status=Status}=Stat)
     edr_log_stats_summary(AccountId, EdrJObj);
 maybe_send_summary_stat(_) -> 'false'.
 
--spec edr_log_queue_event(kz_term:ne_binary(), kz_term:ne_binary(), kz_term:proplist()) -> 'ok'.
-edr_log_queue_event(AccountId, Event, Prop) ->
-    Body = kz_json:normalize(kz_json:from_list([{<<"Event">>, Event} | Prop])),
+-spec call_state_change(kz_term:ne_binary(), kz_term:ne_binary(), kz_term:proplist()) -> 'ok'.
+call_state_change(AccountId, Status, Prop) ->
+    Body = kz_json:normalize(kz_json:from_list([{<<"Event">>, <<"call_status_change">>}
+                                               ,{<<"Status">>, Status}
+                                                | Prop
+                                               ])),
     kz_edr:event(?APP_NAME, ?APP_VERSION, 'ok', 'info', Body, AccountId).
 
 -spec edr_log_stats_summary(kz_term:ne_binary(), kz_term:proplist()) -> 'ok'.

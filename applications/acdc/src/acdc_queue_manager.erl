@@ -17,6 +17,8 @@
 -module(acdc_queue_manager).
 -behaviour(gen_listener).
 
+-define(CB_AGENTS_LIST, <<"queues/agents_listing">>).
+
 %% API
 -export([start_link/2, start_link/3
         ,handle_member_call/2
@@ -38,6 +40,7 @@
         ,refresh/2
         ,callback_details/2
         ]).
+
 
 %% FSM helpers
 -export([pick_winner/3]).
@@ -349,8 +352,8 @@ init([Super, QueueJObj]) ->
 init([Super, AccountId, QueueId]) ->
     kz_log:put_callid(<<"mgr_", QueueId/binary>>),
 
-    AcctDb = kzs_util:format_account_db(AccountId),
-    {'ok', QueueJObj} = kz_datamgr:open_cache_doc(AcctDb, QueueId),
+    AccountDb = kzs_util:format_account_db(AccountId),
+    {'ok', QueueJObj} = kz_datamgr:open_cache_doc(AccountDb, QueueId),
 
     init(Super, AccountId, QueueId, QueueJObj).
 
@@ -530,20 +533,18 @@ handle_cast({'start_workers'}, #state{account_id=AccountId
                                      }=State) ->
     WorkersSup = acdc_queue_sup:workers_sup(QueueSup),
     case kz_datamgr:get_results(kzs_util:format_account_db(AccountId)
-                               ,<<"queues/agents_listing">>
+                               ,?CB_AGENTS_LIST
                                ,[{'key', QueueId}
-                                ,'include_docs'
+                                ,{'group', 'true'}
+                                ,{'group_level', 1}
                                 ])
     of
         {'ok', []} ->
             lager:debug("no agents yet, but create a worker anyway"),
             acdc_queue_workers_sup:new_worker(WorkersSup, AccountId, QueueId);
-        {'ok', Agents} ->
-            _ = [start_agent_and_worker(WorkersSup, AccountId, QueueId
-                                       ,kz_json:get_value(<<"doc">>, A)
-                                       )
-                 || A <- Agents
-                ],
+        {'ok', [Result]} ->
+            QWC = kz_json:get_integer_value(<<"value">>, Result),
+            acdc_queue_workers_sup:new_workers(WorkersSup, AccountId, QueueId, QWC),
             'ok';
         {'error', _E} ->
             lager:debug("failed to find agent count: ~p", [_E]),
@@ -957,22 +958,6 @@ publish_queue_member_remove(AccountId, QueueId, CallId) ->
             | kz_api:default_headers(?APP_NAME, ?APP_VERSION)
            ],
     kapi_acdc_queue:publish_queue_member_remove(Prop).
-
--spec start_agent_and_worker(pid(), kz_term:ne_binary(), kz_term:ne_binary(), kz_json:object()) -> 'ok'.
-start_agent_and_worker(WorkersSup, AccountId, QueueId, AgentJObj) ->
-    acdc_queue_workers_sup:new_worker(WorkersSup, AccountId, QueueId),
-    AgentId = kz_doc:id(AgentJObj),
-    case acdc_agent_util:most_recent_status(AccountId, AgentId) of
-        {'ok', <<"logout">>} -> 'ok';
-        {'ok', <<"logged_out">>} -> 'ok';
-        {'ok', _Status} ->
-            lager:debug("maybe starting agent ~s(~s) for queue ~s", [AgentId, _Status, QueueId]),
-
-            case acdc_agents_sup:find_agent_supervisor(AccountId, AgentId) of
-                'undefined' -> acdc_agents_sup:new(AgentJObj);
-                P when is_pid(P) -> 'ok'
-            end
-    end.
 
 %% Really sophisticated selection algorithm
 -spec pick_winner_(kz_json:objects(), queue_strategy(), kz_term:api_binary()) ->
@@ -1412,21 +1397,22 @@ get_strategy(_) -> 'rr'.
 -spec create_strategy_state(queue_strategy()
                            ,kz_term:ne_binary(), kz_term:ne_binary()
                            ) -> strategy_state().
-create_strategy_state(Strategy, AcctDb, QueueId) ->
-    create_strategy_state(Strategy, #strategy_state{}, AcctDb, QueueId).
+create_strategy_state(Strategy, AccountDb, QueueId) ->
+    create_strategy_state(Strategy, #strategy_state{}, AccountDb, QueueId).
 
 -spec create_strategy_state(queue_strategy()
                            ,strategy_state()
                            ,kz_term:ne_binary(), kz_term:ne_binary()
                            ) -> strategy_state().
-create_strategy_state(S, #strategy_state{agents='undefined'}=SS, AcctDb, QueueId) when S =:= 'rr'
+create_strategy_state(S, #strategy_state{agents='undefined'}=SS, AccountDb, QueueId) when S =:= 'rr'
                                                                                        orelse S =:= 'all' ->
-    create_strategy_state(S, SS#strategy_state{agents=pqueue4:new()}, AcctDb, QueueId);
-create_strategy_state(S, #strategy_state{agents=AgentQ}=SS, AcctDb, QueueId) when S =:= 'rr'
+    create_strategy_state(S, SS#strategy_state{agents=pqueue4:new()}, AccountDb, QueueId);
+create_strategy_state(S, #strategy_state{agents=AgentQ}=SS, AccountDb, QueueId) when S =:= 'rr'
                                                                                   orelse S =:= 'all' ->
-    case kz_datamgr:get_results(AcctDb, <<"queues/agents_listing">>, [{'key', QueueId}]) of
-        {'ok', []} -> lager:debug("no agents around"), SS;
-        {'ok', JObjs} ->
+    case acdc_util:agents_in_queue(AccountDb, QueueId) of
+        [] -> lager:debug("no agents around"), SS;
+        {'error', _E} -> lager:debug("error creating strategy rr: ~p", [_E]), SS;
+        JObjs ->
             AgentMap = lists:map(fun(JObj) ->
                                          {kz_doc:id(JObj)
                                          ,-1 * kz_json:get_integer_value([<<"value">>, <<"agent_priority">>], JObj, 0)
@@ -1444,15 +1430,15 @@ create_strategy_state(S, #strategy_state{agents=AgentQ}=SS, AcctDb, QueueId) whe
                                   end, dict:new(), JObjs),
             SS#strategy_state{agents=Q1
                              ,details=Details
-                             };
-        {'error', _E} -> lager:debug("error creating strategy rr: ~p", [_E]), SS
+                             }
     end;
-create_strategy_state('mi', #strategy_state{agents='undefined'}=SS, AcctDb, QueueId) ->
-    create_strategy_state('mi', SS#strategy_state{agents=[]}, AcctDb, QueueId);
-create_strategy_state('mi', #strategy_state{agents=AgentL}=SS, AcctDb, QueueId) ->
-    case kz_datamgr:get_results(AcctDb, <<"queues/agents_listing">>, [{key, QueueId}]) of
-        {'ok', []} -> lager:debug("no agents around"), SS;
-        {'ok', JObjs} ->
+create_strategy_state('mi', #strategy_state{agents='undefined'}=SS, AccountDb, QueueId) ->
+    create_strategy_state('mi', SS#strategy_state{agents=[]}, AccountDb, QueueId);
+create_strategy_state('mi', #strategy_state{agents=AgentL}=SS, AccountDb, QueueId) ->
+    case acdc_util:agents_in_queue(AccountDb, QueueId) of
+        [] -> lager:debug("no agents around"), SS;
+        {'error', _E} -> lager:debug("error creating strategy mi: ~p", [_E]), SS;
+        JObjs ->
             AgentL1 = lists:foldl(fun(JObj, Acc) ->
                                           AgentId = kz_doc:id(JObj),
                                           case lists:member(AgentId, Acc) of
@@ -1467,21 +1453,20 @@ create_strategy_state('mi', #strategy_state{agents=AgentL}=SS, AcctDb, QueueId) 
                                   end, dict:new(), JObjs),
             SS#strategy_state{agents=AgentL1
                              ,details=Details
-                             };
-        {'error', _E} -> lager:debug("error creating strategy mi: ~p", [_E]), SS
+                             }
     end;
-create_strategy_state('sbrr', #strategy_state{agents='undefined'}=SS, AcctDb, QueueId) ->
+create_strategy_state('sbrr', #strategy_state{agents='undefined'}=SS, AccountDb, QueueId) ->
     SBRRStrategyState = #{agent_id_map => #{}
                          ,call_id_map => #{}
                          ,rr_queue => pqueue4:new()
                          ,skill_map => #{}
                          },
-    create_strategy_state('sbrr', SS#strategy_state{agents=SBRRStrategyState}, AcctDb, QueueId);
-create_strategy_state('sbrr', SS, AcctDb, QueueId) ->
-    case kz_datamgr:get_results(AcctDb, <<"queues/agents_listing">>, [{'key', QueueId}]) of
-        {'ok', []} -> lager:debug("no agents around"), SS;
-        {'ok', JObjs} -> lists:foldl(fun update_sbrrss_with_agent/2, SS, JObjs);
-        {'error', _E} -> lager:debug("error creating strategy mi: ~p", [_E]), SS
+    create_strategy_state('sbrr', SS#strategy_state{agents=SBRRStrategyState}, AccountDb, QueueId);
+create_strategy_state('sbrr', SS, AccountDb, QueueId) ->
+    case acdc_util:agents_in_queue(AccountDb, QueueId) of
+        [] -> lager:debug("no agents around"), SS;
+        {'error', _E} -> lager:debug("error creating strategy mi: ~p", [_E]), SS;
+        JObjs -> lists:foldl(fun update_sbrrss_with_agent/2, SS, JObjs)
     end.
 
 update_strategy_state(Srv, S, #strategy_state{agents=AgentQueue}) when S =:= 'rr'
