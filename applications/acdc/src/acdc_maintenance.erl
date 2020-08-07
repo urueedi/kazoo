@@ -485,7 +485,7 @@ agent_pause(AccountId, AgentId, Timeout) ->
     Update = props:filter_undefined(
                [{<<"Account-ID">>, AccountId}
                ,{<<"Agent-ID">>, AgentId}
-               ,{<<"Timeout">>, kz_term:to_integer(Timeout)}
+               ,{<<"Time-Limit">>, Timeout}
                 | kz_api:default_headers(?APP_NAME, ?APP_VERSION)
                ]),
     kz_amqp_worker:cast(Update, fun kapi_acdc_agent:publish_pause/1),
