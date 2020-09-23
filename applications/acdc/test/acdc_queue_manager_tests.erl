@@ -22,9 +22,9 @@
 %% @end
 %%------------------------------------------------------------------------------
 ss_size_empty_test_() ->
-    SS = #strategy_state{agents=[]},
-    [?_assertEqual(0, acdc_queue_manager:ss_size(SS, 'free'))
-    ,?_assertEqual(0, acdc_queue_manager:ss_size(SS, 'logged_in'))].
+    SS = #strategy_state{agents=pqueue4:new()},
+    [?_assertEqual(0, acdc_queue_manager:ss_size('rr', SS, 'free'))
+    ,?_assertEqual(0, acdc_queue_manager:ss_size('rr', SS, 'logged_in'))].
 
 ss_size_one_busy_test_() ->
     SS = #strategy_state{agents=[]},
