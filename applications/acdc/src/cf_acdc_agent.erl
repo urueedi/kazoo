@@ -28,6 +28,7 @@
         ,logout_agent/2
         ]).
 
+-include("acdc_config.hrl").
 -include_lib("callflow/src/callflow.hrl").
 
 %%------------------------------------------------------------------------------
