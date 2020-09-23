@@ -32,6 +32,7 @@ DEPS = amqp_client \
 	nklib \
 	plists \
 	poolboy \
+        pqueue \
 	proper \
 	recon \
 	reloader \
@@ -99,6 +100,9 @@ dep_reloader = git https://github.com/lazedo/reloader v0.1
 dep_parse_trans = git https://github.com/lazedo/parse_trans
 
 dep_horse = git https://github.com/ninenines/horse
+
+### used by ACDC for prioity queues ###
+dep_pqueue = hex 1.7.2
 
 dep_proper = git https://github.com/manopapad/proper v1.2
 
