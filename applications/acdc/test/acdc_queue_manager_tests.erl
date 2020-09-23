@@ -22,13 +22,14 @@
 %% @end
 %%------------------------------------------------------------------------------
 ss_size_empty_test_() ->
-    SS = #strategy_state{agents=[]},
-    [?_assertEqual(0, acdc_queue_manager:ss_size(SS, 'free'))
-    ,?_assertEqual(0, acdc_queue_manager:ss_size(SS, 'logged_in'))].
+    SS = #strategy_state{agents=pqueue4:new()},
+    [?_assertEqual(0, acdc_queue_manager:ss_size('rr', SS, 'free'))
+    ,?_assertEqual(0, acdc_queue_manager:ss_size('rr', SS, 'logged_in'))].
 
 ss_size_one_busy_test_() ->
     SS = #strategy_state{agents=[]},
-    SS1 = acdc_queue_manager:update_strategy_with_agent('mi', SS, ?AGENT_ID, 'add', 'undefined'),
-    SS2 = acdc_queue_manager:update_strategy_with_agent('mi', SS1, ?AGENT_ID, 'remove', 'busy'),
-    [?_assertEqual(0, acdc_queue_manager:ss_size(SS2, 'free'))
-    ,?_assertEqual(1, acdc_queue_manager:ss_size(SS2, 'logged_in'))].
+    State = #state{strategy='mi', strategy_state = SS},
+    SS1 = acdc_queue_manager:update_strategy_with_agent(State, ?AGENT_ID, 0, [], 'add', 'undefined'),
+    SS2 = acdc_queue_manager:update_strategy_with_agent(State#state{strategy_state = SS1}, ?AGENT_ID, 0, [], 'remove', 'busy'),
+    [?_assertEqual(0, acdc_queue_manager:ss_size('mi', SS2, 'free'))
+    ,?_assertEqual(1, acdc_queue_manager:ss_size('mi', SS2, 'logged_in'))].
