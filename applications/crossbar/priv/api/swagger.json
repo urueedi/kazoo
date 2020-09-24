@@ -7172,6 +7172,9 @@
                 "Agent-ID": {
                     "type": "string"
                 },
+                "Call-ID": {
+                    "type": "string"
+                },
                 "Event-Category": {
                     "enum": [
                         "agent"
@@ -7194,6 +7197,9 @@
             "description": "AMQP API for acdc_agent.stats_resp",
             "properties": {
                 "Account-ID": {
+                    "type": "string"
+                },
+                "Agent-Call-IDs": {
                     "type": "string"
                 },
                 "Current-Calls": {
@@ -7317,6 +7323,21 @@
                 "Agent-ID": {
                     "type": "string"
                 },
+                "Call-Direction": {
+                    "type": "string"
+                },
+                "Callee-ID-Name": {
+                    "type": "string"
+                },
+                "Callee-ID-Number": {
+                    "type": "string"
+                },
+                "Caller-ID-Name": {
+                    "type": "string"
+                },
+                "Caller-ID-Number": {
+                    "type": "string"
+                },
                 "Change": {
                     "enum": [
                         "available",
@@ -7338,10 +7359,16 @@
                     ],
                     "type": "string"
                 },
+                "Priority": {
+                    "type": "string"
+                },
                 "Process-ID": {
                     "type": "string"
                 },
                 "Queue-ID": {
+                    "type": "string"
+                },
+                "Skills": {
                     "type": "string"
                 }
             },
@@ -7384,6 +7411,72 @@
             ],
             "type": "object"
         },
+        "kapi.acdc_queue.agents_available_req": {
+            "description": "AMQP API for acdc_queue.agents_available_req",
+            "properties": {
+                "Account-ID": {
+                    "type": "string"
+                },
+                "Event-Category": {
+                    "enum": [
+                        "queue"
+                    ],
+                    "type": "string"
+                },
+                "Event-Name": {
+                    "enum": [
+                        "agents_available_req"
+                    ],
+                    "type": "string"
+                },
+                "Queue-ID": {
+                    "type": "string"
+                },
+                "Skills": {
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
+                }
+            },
+            "required": [
+                "Account-ID",
+                "Queue-ID"
+            ],
+            "type": "object"
+        },
+        "kapi.acdc_queue.agents_available_resp": {
+            "description": "AMQP API for acdc_queue.agents_available_resp",
+            "properties": {
+                "Account-ID": {
+                    "type": "string"
+                },
+                "Agent-Count": {
+                    "type": "string"
+                },
+                "Event-Category": {
+                    "enum": [
+                        "queue"
+                    ],
+                    "type": "string"
+                },
+                "Event-Name": {
+                    "enum": [
+                        "agents_available_resp"
+                    ],
+                    "type": "string"
+                },
+                "Queue-ID": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "Account-ID",
+                "Agent-Count",
+                "Queue-ID"
+            ],
+            "type": "object"
+        },
         "kapi.acdc_queue.member_call": {
             "description": "AMQP API for acdc_queue.member_call",
             "properties": {
@@ -7392,6 +7485,12 @@
                 },
                 "Call": {
                     "type": "object"
+                },
+                "Callback-Number": {
+                    "type": "string"
+                },
+                "Enter-As-Callback": {
+                    "type": "boolean"
                 },
                 "Event-Category": {
                     "enum": [
@@ -7532,6 +7631,78 @@
             ],
             "type": "object"
         },
+        "kapi.acdc_queue.member_callback_accepted": {
+            "description": "AMQP API for acdc_queue.member_callback_accepted",
+            "properties": {
+                "Account-ID": {
+                    "type": "string"
+                },
+                "Agent-ID": {
+                    "type": "string"
+                },
+                "Call-ID": {
+                    "type": "string"
+                },
+                "Event-Category": {
+                    "enum": [
+                        "member"
+                    ],
+                    "type": "string"
+                },
+                "Event-Name": {
+                    "enum": [
+                        "callback_accepted"
+                    ],
+                    "type": "string"
+                },
+                "Process-ID": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "Account-ID",
+                "Agent-ID",
+                "Call-ID",
+                "Process-ID"
+            ],
+            "type": "object"
+        },
+        "kapi.acdc_queue.member_callback_reg": {
+            "description": "AMQP API for acdc_queue.member_callback_reg",
+            "properties": {
+                "Account-ID": {
+                    "type": "string"
+                },
+                "Call-ID": {
+                    "type": "string"
+                },
+                "Event-Category": {
+                    "enum": [
+                        "member"
+                    ],
+                    "type": "string"
+                },
+                "Event-Name": {
+                    "enum": [
+                        "callback_reg"
+                    ],
+                    "type": "string"
+                },
+                "Number": {
+                    "type": "string"
+                },
+                "Queue-ID": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "Account-ID",
+                "Call-ID",
+                "Number",
+                "Queue-ID"
+            ],
+            "type": "object"
+        },
         "kapi.acdc_queue.member_connect_accepted": {
             "description": "AMQP API for acdc_queue.member_connect_accepted",
             "properties": {
@@ -7554,6 +7725,9 @@
                     "enum": [
                         "connect_accepted"
                     ],
+                    "type": "string"
+                },
+                "Old-Call-ID": {
                     "type": "string"
                 },
                 "Process-ID": {
@@ -7660,6 +7834,106 @@
             ],
             "type": "object"
         },
+        "kapi.acdc_queue.member_connect_satisfied": {
+            "description": "AMQP API for acdc_queue.member_connect_satisfied",
+            "properties": {
+                "Accept-Agent-ID": {
+                    "type": "string"
+                },
+                "Agent-ID": {
+                    "type": "string"
+                },
+                "Agent-Process-IDs": {
+                    "type": "string"
+                },
+                "Call": {
+                    "type": "object"
+                },
+                "Event-Category": {
+                    "enum": [
+                        "member"
+                    ],
+                    "type": "string"
+                },
+                "Event-Name": {
+                    "enum": [
+                        "connect_satisfied"
+                    ],
+                    "type": "string"
+                },
+                "Process-ID": {
+                    "type": "string"
+                },
+                "Queue-ID": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "Accept-Agent-ID",
+                "Agent-ID",
+                "Call",
+                "Queue-ID"
+            ],
+            "type": "object"
+        },
+        "kapi.acdc_queue.member_connect_win": {
+            "description": "AMQP API for acdc_queue.member_connect_win",
+            "properties": {
+                "Agent-Process-IDs": {
+                    "type": "string"
+                },
+                "CDR-Url": {
+                    "type": "string"
+                },
+                "Call": {
+                    "type": "object"
+                },
+                "Callback-Details": {
+                    "type": "string"
+                },
+                "Caller-Exit-Key": {
+                    "type": "string"
+                },
+                "Event-Category": {
+                    "enum": [
+                        "member"
+                    ],
+                    "type": "string"
+                },
+                "Event-Name": {
+                    "enum": [
+                        "connect_win"
+                    ],
+                    "type": "string"
+                },
+                "Notifications": {
+                    "type": "object"
+                },
+                "Process-ID": {
+                    "type": "string"
+                },
+                "Queue-ID": {
+                    "type": "string"
+                },
+                "Record-Caller": {
+                    "type": "boolean"
+                },
+                "Recording-URL": {
+                    "type": "string"
+                },
+                "Ring-Timeout": {
+                    "type": "integer"
+                },
+                "Wrapup-Timeout": {
+                    "type": "integer"
+                }
+            },
+            "required": [
+                "Call",
+                "Queue-ID"
+            ],
+            "type": "object"
+        },
         "kapi.acdc_queue.member_hungup": {
             "description": "AMQP API for acdc_queue.member_hungup",
             "properties": {
@@ -7696,6 +7970,12 @@
                 "Call": {
                     "type": "object"
                 },
+                "Callback-Number": {
+                    "type": "string"
+                },
+                "Enter-As-Callback": {
+                    "type": "boolean"
+                },
                 "Event-Category": {
                     "enum": [
                         "queue"
@@ -7707,6 +7987,9 @@
                         "member_add"
                     ],
                     "type": "string"
+                },
+                "Member-Priority": {
+                    "type": "integer"
                 },
                 "Queue-ID": {
                     "type": "string"
@@ -7820,6 +8103,171 @@
             ],
             "type": "object"
         },
+        "kapi.acdc_stats.agent_calls_err": {
+            "description": "AMQP API for acdc_stats.agent_calls_err",
+            "properties": {
+                "Error-Reason": {
+                    "type": "string"
+                },
+                "Event-Category": {
+                    "enum": [
+                        "acdc_stat"
+                    ],
+                    "type": "string"
+                },
+                "Event-Name": {
+                    "enum": [
+                        "agent_calls_err"
+                    ],
+                    "type": "string"
+                }
+            },
+            "required": [
+                "Error-Reason"
+            ],
+            "type": "object"
+        },
+        "kapi.acdc_stats.agent_calls_req": {
+            "description": "AMQP API for acdc_stats.agent_calls_req",
+            "properties": {
+                "Account-ID": {
+                    "type": "string"
+                },
+                "Agent-ID": {
+                    "type": "string"
+                },
+                "End-Range": {
+                    "type": "string"
+                },
+                "Event-Category": {
+                    "enum": [
+                        "acdc_stat"
+                    ],
+                    "type": "string"
+                },
+                "Event-Name": {
+                    "enum": [
+                        "agent_calls_req"
+                    ],
+                    "type": "string"
+                },
+                "Queue-ID": {
+                    "type": "string"
+                },
+                "Start-Range": {
+                    "type": "string"
+                },
+                "Status": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "Account-ID"
+            ],
+            "type": "object"
+        },
+        "kapi.acdc_stats.agent_calls_resp": {
+            "description": "AMQP API for acdc_stats.agent_calls_resp",
+            "properties": {
+                "Data": {
+                    "type": "string"
+                },
+                "Event-Category": {
+                    "enum": [
+                        "acdc_stat"
+                    ],
+                    "type": "string"
+                },
+                "Event-Name": {
+                    "enum": [
+                        "agent_calls_resp"
+                    ],
+                    "type": "string"
+                },
+                "Query-Time": {
+                    "type": "integer"
+                }
+            },
+            "required": [
+                "Query-Time"
+            ],
+            "type": "object"
+        },
+        "kapi.acdc_stats.agent_cur_status_err": {
+            "description": "AMQP API for acdc_stats.agent_cur_status_err",
+            "properties": {
+                "Error-Reason": {
+                    "type": "string"
+                },
+                "Event-Category": {
+                    "enum": [
+                        "acdc_stat"
+                    ],
+                    "type": "string"
+                },
+                "Event-Name": {
+                    "enum": [
+                        "agent_cur_status_err"
+                    ],
+                    "type": "string"
+                }
+            },
+            "required": [
+                "Error-Reason"
+            ],
+            "type": "object"
+        },
+        "kapi.acdc_stats.agent_cur_status_req": {
+            "description": "AMQP API for acdc_stats.agent_cur_status_req",
+            "properties": {
+                "Account-ID": {
+                    "type": "string"
+                },
+                "Agent-ID": {
+                    "type": "string"
+                },
+                "Event-Category": {
+                    "enum": [
+                        "acdc_stat"
+                    ],
+                    "type": "string"
+                },
+                "Event-Name": {
+                    "enum": [
+                        "agent_cur_status_req"
+                    ],
+                    "type": "string"
+                }
+            },
+            "required": [
+                "Account-ID"
+            ],
+            "type": "object"
+        },
+        "kapi.acdc_stats.agent_cur_status_resp": {
+            "description": "AMQP API for acdc_stats.agent_cur_status_resp",
+            "properties": {
+                "Agents": {
+                    "type": "string"
+                },
+                "Event-Category": {
+                    "enum": [
+                        "acdc_stat"
+                    ],
+                    "type": "string"
+                },
+                "Event-Name": {
+                    "enum": [
+                        "agent_cur_status_resp"
+                    ],
+                    "type": "string"
+                }
+            },
+            "required": [
+                "Agents"
+            ],
+            "type": "object"
+        },
         "kapi.acdc_stats.average_wait_time_err": {
             "description": "AMQP API for acdc_stats.average_wait_time_err",
             "properties": {
@@ -7866,6 +8314,12 @@
                 "Queue-ID": {
                     "minLength": 1,
                     "type": "string"
+                },
+                "Skills": {
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
                 },
                 "Window": {
                     "type": "integer"
@@ -7939,6 +8393,41 @@
             ],
             "type": "object"
         },
+        "kapi.acdc_stats.call_exited_position": {
+            "description": "AMQP API for acdc_stats.call_exited_position",
+            "properties": {
+                "Account-ID": {
+                    "type": "string"
+                },
+                "Call-ID": {
+                    "type": "string"
+                },
+                "Event-Category": {
+                    "enum": [
+                        "acdc_call_stat"
+                    ],
+                    "type": "string"
+                },
+                "Event-Name": {
+                    "enum": [
+                        "exited-position"
+                    ],
+                    "type": "string"
+                },
+                "Exited-Position": {
+                    "type": "string"
+                },
+                "Queue-ID": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "Account-ID",
+                "Call-ID",
+                "Queue-ID"
+            ],
+            "type": "object"
+        },
         "kapi.acdc_stats.call_flush": {
             "description": "AMQP API for acdc_stats.call_flush",
             "properties": {
@@ -7996,6 +8485,41 @@
                     "type": "string"
                 },
                 "Handled-Timestamp": {
+                    "type": "string"
+                },
+                "Queue-ID": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "Account-ID",
+                "Call-ID",
+                "Queue-ID"
+            ],
+            "type": "object"
+        },
+        "kapi.acdc_stats.call_marked_callback": {
+            "description": "AMQP API for acdc_stats.call_marked_callback",
+            "properties": {
+                "Account-ID": {
+                    "type": "string"
+                },
+                "Call-ID": {
+                    "type": "string"
+                },
+                "Caller-ID-Name": {
+                    "type": "string"
+                },
+                "Event-Category": {
+                    "enum": [
+                        "acdc_call_stat"
+                    ],
+                    "type": "string"
+                },
+                "Event-Name": {
+                    "enum": [
+                        "marked_callback"
+                    ],
                     "type": "string"
                 },
                 "Queue-ID": {
@@ -8091,6 +8615,114 @@
             ],
             "type": "object"
         },
+        "kapi.acdc_stats.call_summary_err": {
+            "description": "AMQP API for acdc_stats.call_summary_err",
+            "properties": {
+                "Error-Reason": {
+                    "type": "string"
+                },
+                "Event-Category": {
+                    "enum": [
+                        "acdc_stat"
+                    ],
+                    "type": "string"
+                },
+                "Event-Name": {
+                    "enum": [
+                        "call_summary_err"
+                    ],
+                    "type": "string"
+                }
+            },
+            "required": [
+                "Error-Reason"
+            ],
+            "type": "object"
+        },
+        "kapi.acdc_stats.call_summary_req": {
+            "description": "AMQP API for acdc_stats.call_summary_req",
+            "properties": {
+                "Account-ID": {
+                    "type": "string"
+                },
+                "Agent-ID": {
+                    "type": "string"
+                },
+                "End-Range": {
+                    "type": "string"
+                },
+                "Event-Category": {
+                    "enum": [
+                        "acdc_stat"
+                    ],
+                    "type": "string"
+                },
+                "Event-Name": {
+                    "enum": [
+                        "call_summary_req"
+                    ],
+                    "type": "string"
+                },
+                "Queue-ID": {
+                    "type": "string"
+                },
+                "Start-Range": {
+                    "type": "string"
+                },
+                "Status": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "Account-ID"
+            ],
+            "type": "object"
+        },
+        "kapi.acdc_stats.call_summary_resp": {
+            "description": "AMQP API for acdc_stats.call_summary_resp",
+            "properties": {
+                "Abandoned": {
+                    "type": "string"
+                },
+                "Data": {
+                    "type": "string"
+                },
+                "Entered-Position": {
+                    "type": "string"
+                },
+                "Event-Category": {
+                    "enum": [
+                        "acdc_stat"
+                    ],
+                    "type": "string"
+                },
+                "Event-Name": {
+                    "enum": [
+                        "call_summary_resp"
+                    ],
+                    "type": "string"
+                },
+                "Exited-Position": {
+                    "type": "string"
+                },
+                "Handled": {
+                    "type": "string"
+                },
+                "Processed": {
+                    "type": "string"
+                },
+                "Query-Time": {
+                    "type": "integer"
+                },
+                "Waiting": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "Query-Time"
+            ],
+            "type": "object"
+        },
         "kapi.acdc_stats.call_waiting": {
             "description": "AMQP API for acdc_stats.call_waiting",
             "properties": {
@@ -8107,6 +8739,9 @@
                     "type": "string"
                 },
                 "Caller-Priority": {
+                    "type": "string"
+                },
+                "Entered-Position": {
                     "type": "string"
                 },
                 "Entered-Timestamp": {
@@ -8126,6 +8761,12 @@
                 },
                 "Queue-ID": {
                     "type": "string"
+                },
+                "Required-Skills": {
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
                 }
             },
             "required": [
@@ -8204,6 +8845,9 @@
                 "Abandoned": {
                     "type": "string"
                 },
+                "Entered-Position": {
+                    "type": "string"
+                },
                 "Event-Category": {
                     "enum": [
                         "acdc_stat"
@@ -8214,6 +8858,9 @@
                     "enum": [
                         "current_calls_resp"
                     ],
+                    "type": "string"
+                },
+                "Exited-Position": {
                     "type": "string"
                 },
                 "Handled": {
@@ -8361,6 +9008,56 @@
             },
             "required": [
                 "Error-Reason"
+            ],
+            "type": "object"
+        },
+        "kapi.acdc_stats.status_inbound": {
+            "description": "AMQP API for acdc_stats.status_inbound",
+            "properties": {
+                "Account-ID": {
+                    "type": "string"
+                },
+                "Agent-ID": {
+                    "type": "string"
+                },
+                "Call-ID": {
+                    "type": "string"
+                },
+                "Caller-ID-Name": {
+                    "type": "string"
+                },
+                "Caller-ID-Number": {
+                    "type": "string"
+                },
+                "Event-Category": {
+                    "enum": [
+                        "acdc_status_stat"
+                    ],
+                    "type": "string"
+                },
+                "Event-Name": {
+                    "enum": [
+                        "inbound"
+                    ],
+                    "type": "string"
+                },
+                "Pause-Alias": {
+                    "type": "string"
+                },
+                "Pause-Time": {
+                    "type": "integer"
+                },
+                "Timestamp": {
+                    "type": "string"
+                },
+                "Wait-Time": {
+                    "type": "integer"
+                }
+            },
+            "required": [
+                "Account-ID",
+                "Agent-ID",
+                "Timestamp"
             ],
             "type": "object"
         },
@@ -29432,6 +30129,10 @@
                         "string"
                     ]
                 },
+                "default_queue_max_priority": {
+                    "description": "acdc default_queue_max_priority",
+                    "type": "integer"
+                },
                 "max_connect_failures": {
                     "default": 3,
                     "description": "acdc maximum connect failures",
@@ -38292,6 +38993,23 @@
                 }
             }
         },
+        "/accounts/{ACCOUNT_ID}/agents/stats_summary": {
+            "get": {
+                "parameters": [
+                    {
+                        "$ref": "#/parameters/auth_token_header"
+                    },
+                    {
+                        "$ref": "#/parameters/ACCOUNT_ID"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "request succeeded"
+                    }
+                }
+            }
+        },
         "/accounts/{ACCOUNT_ID}/agents/status": {
             "get": {
                 "parameters": [
@@ -44430,6 +45148,23 @@
                 }
             }
         },
+        "/accounts/{ACCOUNT_ID}/queues/stats_summary": {
+            "get": {
+                "parameters": [
+                    {
+                        "$ref": "#/parameters/auth_token_header"
+                    },
+                    {
+                        "$ref": "#/parameters/ACCOUNT_ID"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "request succeeded"
+                    }
+                }
+            }
+        },
         "/accounts/{ACCOUNT_ID}/queues/{QUEUE_ID}": {
             "delete": {
                 "parameters": [
@@ -44587,6 +45322,26 @@
                             "$ref": "#/definitions/queues"
                         }
                     },
+                    {
+                        "$ref": "#/parameters/auth_token_header"
+                    },
+                    {
+                        "$ref": "#/parameters/QUEUE_ID"
+                    },
+                    {
+                        "$ref": "#/parameters/ACCOUNT_ID"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "request succeeded"
+                    }
+                }
+            }
+        },
+        "/accounts/{ACCOUNT_ID}/queues/{QUEUE_ID}/stats_summary": {
+            "get": {
+                "parameters": [
                     {
                         "$ref": "#/parameters/auth_token_header"
                     },
