@@ -481,7 +481,6 @@ agent_pause(AccountId, AgentId) ->
 
 -spec agent_pause(kz_term:ne_binary(), kz_term:ne_binary(), pos_integer()) -> 'ok'.
 agent_pause(AccountId, AgentId, Timeout) ->
-
     kz_util:put_callid(?MODULE),
     Update = props:filter_undefined(
                [{<<"Account-ID">>, AccountId}
