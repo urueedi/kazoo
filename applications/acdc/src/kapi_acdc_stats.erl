@@ -126,7 +126,7 @@
                          ,<<"Required-Skills">>
                          ]).
 -define(WAITING_VALUES, ?CALL_REQ_VALUES(<<"waiting">>)).
--define(WAITING_TYPES, [{<<"Required-Skills">>, fun kz_term:is_ne_binaries/1}]).
+-define(WAITING_TYPES, [{<<"Required-Skills">>, fun is_list/1}]).
 
 -define(MISS_HEADERS, [<<"Agent-ID">>, <<"Miss-Reason">>, <<"Miss-Timestamp">>]).
 -define(MISS_VALUES, ?CALL_REQ_VALUES(<<"missed">>)).
@@ -531,7 +531,7 @@ agent_calls_resp_v(JObj) ->
                                       ]).
 -define(AVERAGE_WAIT_TIME_REQ_TYPES, [{<<"Account-ID">>, fun kz_term:is_ne_binary/1}
                                      ,{<<"Queue-ID">>, fun kz_term:is_ne_binary/1}
-                                     ,{<<"Skills">>, fun kz_term:is_ne_binaries/1}
+                                     ,{<<"Skills">>, fun is_list/1}
                                      ,{<<"Window">>, fun is_integer/1}
                                      ]).
 
