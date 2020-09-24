@@ -1,1 +1,26 @@
-{"type":"object","required":["Error-Reason"],"properties":{"Event-Name":{"type":"string","enum":["agent_cur_status_err"]},"Event-Category":{"type":"string","enum":["acdc_stat"]},"Error-Reason":{"type":"string"}},"description":"AMQP API for acdc_stats.agent_cur_status_err","_id":"kapi.acdc_stats.agent_cur_status_err","$schema":"http://json-schema.org/draft-04/schema#"}
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "_id": "kapi.acdc_stats.agent_cur_status_err",
+    "description": "AMQP API for acdc_stats.agent_cur_status_err",
+    "properties": {
+        "Error-Reason": {
+            "type": "string"
+        },
+        "Event-Category": {
+            "enum": [
+                "acdc_stat"
+            ],
+            "type": "string"
+        },
+        "Event-Name": {
+            "enum": [
+                "agent_cur_status_err"
+            ],
+            "type": "string"
+        }
+    },
+    "required": [
+        "Error-Reason"
+    ],
+    "type": "object"
+}

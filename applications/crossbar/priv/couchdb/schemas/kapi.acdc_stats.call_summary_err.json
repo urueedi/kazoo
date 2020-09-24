@@ -1,1 +1,26 @@
-{"type":"object","required":["Error-Reason"],"properties":{"Event-Name":{"type":"string","enum":["call_summary_err"]},"Event-Category":{"type":"string","enum":["acdc_stat"]},"Error-Reason":{"type":"string"}},"description":"AMQP API for acdc_stats.call_summary_err","_id":"kapi.acdc_stats.call_summary_err","$schema":"http://json-schema.org/draft-04/schema#"}
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "_id": "kapi.acdc_stats.call_summary_err",
+    "description": "AMQP API for acdc_stats.call_summary_err",
+    "properties": {
+        "Error-Reason": {
+            "type": "string"
+        },
+        "Event-Category": {
+            "enum": [
+                "acdc_stat"
+            ],
+            "type": "string"
+        },
+        "Event-Name": {
+            "enum": [
+                "call_summary_err"
+            ],
+            "type": "string"
+        }
+    },
+    "required": [
+        "Error-Reason"
+    ],
+    "type": "object"
+}
