@@ -1,1 +1,37 @@
-{"type":"object","required":["Account-ID","Call-ID","Queue-ID"],"properties":{"Queue-ID":{"type":"string"},"Event-Name":{"type":"string","enum":["marked_callback"]},"Event-Category":{"type":"string","enum":["acdc_call_stat"]},"Caller-ID-Name":{"type":"string"},"Call-ID":{"type":"string"},"Account-ID":{"type":"string"}},"description":"AMQP API for acdc_stats.call_marked_callback","_id":"kapi.acdc_stats.call_marked_callback","$schema":"http://json-schema.org/draft-04/schema#"}
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "_id": "kapi.acdc_stats.call_marked_callback",
+    "description": "AMQP API for acdc_stats.call_marked_callback",
+    "properties": {
+        "Account-ID": {
+            "type": "string"
+        },
+        "Call-ID": {
+            "type": "string"
+        },
+        "Caller-ID-Name": {
+            "type": "string"
+        },
+        "Event-Category": {
+            "enum": [
+                "acdc_call_stat"
+            ],
+            "type": "string"
+        },
+        "Event-Name": {
+            "enum": [
+                "marked_callback"
+            ],
+            "type": "string"
+        },
+        "Queue-ID": {
+            "type": "string"
+        }
+    },
+    "required": [
+        "Account-ID",
+        "Call-ID",
+        "Queue-ID"
+    ],
+    "type": "object"
+}

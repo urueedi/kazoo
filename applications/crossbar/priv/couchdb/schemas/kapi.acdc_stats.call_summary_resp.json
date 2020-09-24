@@ -1,1 +1,47 @@
-{"type":"object","required":["Query-Time"],"properties":{"Waiting":{"type":"string"},"Query-Time":{"type":"integer"},"Processed":{"type":"string"},"Handled":{"type":"string"},"Exited-Position":{"type":"string"},"Event-Name":{"type":"string","enum":["call_summary_resp"]},"Event-Category":{"type":"string","enum":["acdc_stat"]},"Entered-Position":{"type":"string"},"Data":{"type":"string"},"Abandoned":{"type":"string"}},"description":"AMQP API for acdc_stats.call_summary_resp","_id":"kapi.acdc_stats.call_summary_resp","$schema":"http://json-schema.org/draft-04/schema#"}
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "_id": "kapi.acdc_stats.call_summary_resp",
+    "description": "AMQP API for acdc_stats.call_summary_resp",
+    "properties": {
+        "Abandoned": {
+            "type": "string"
+        },
+        "Data": {
+            "type": "string"
+        },
+        "Entered-Position": {
+            "type": "string"
+        },
+        "Event-Category": {
+            "enum": [
+                "acdc_stat"
+            ],
+            "type": "string"
+        },
+        "Event-Name": {
+            "enum": [
+                "call_summary_resp"
+            ],
+            "type": "string"
+        },
+        "Exited-Position": {
+            "type": "string"
+        },
+        "Handled": {
+            "type": "string"
+        },
+        "Processed": {
+            "type": "string"
+        },
+        "Query-Time": {
+            "type": "integer"
+        },
+        "Waiting": {
+            "type": "string"
+        }
+    },
+    "required": [
+        "Query-Time"
+    ],
+    "type": "object"
+}

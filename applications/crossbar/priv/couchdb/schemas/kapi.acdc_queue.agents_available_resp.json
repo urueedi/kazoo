@@ -1,1 +1,34 @@
-{"type":"object","required":["Account-ID","Agent-Count","Queue-ID"],"properties":{"Queue-ID":{"type":"string"},"Event-Name":{"type":"string","enum":["agents_available_resp"]},"Event-Category":{"type":"string","enum":["queue"]},"Agent-Count":{"type":"string"},"Account-ID":{"type":"string"}},"description":"AMQP API for acdc_queue.agents_available_resp","_id":"kapi.acdc_queue.agents_available_resp","$schema":"http://json-schema.org/draft-04/schema#"}
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "_id": "kapi.acdc_queue.agents_available_resp",
+    "description": "AMQP API for acdc_queue.agents_available_resp",
+    "properties": {
+        "Account-ID": {
+            "type": "string"
+        },
+        "Agent-Count": {
+            "type": "string"
+        },
+        "Event-Category": {
+            "enum": [
+                "queue"
+            ],
+            "type": "string"
+        },
+        "Event-Name": {
+            "enum": [
+                "agents_available_resp"
+            ],
+            "type": "string"
+        },
+        "Queue-ID": {
+            "type": "string"
+        }
+    },
+    "required": [
+        "Account-ID",
+        "Agent-Count",
+        "Queue-ID"
+    ],
+    "type": "object"
+}

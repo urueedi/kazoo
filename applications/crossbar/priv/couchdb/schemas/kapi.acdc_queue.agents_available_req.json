@@ -1,1 +1,36 @@
-{"type":"object","required":["Account-ID","Queue-ID"],"properties":{"Skills":{"type":"array","items":{"type":"string"}},"Queue-ID":{"type":"string"},"Event-Name":{"type":"string","enum":["agents_available_req"]},"Event-Category":{"type":"string","enum":["queue"]},"Account-ID":{"type":"string"}},"description":"AMQP API for acdc_queue.agents_available_req","_id":"kapi.acdc_queue.agents_available_req","$schema":"http://json-schema.org/draft-04/schema#"}
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "_id": "kapi.acdc_queue.agents_available_req",
+    "description": "AMQP API for acdc_queue.agents_available_req",
+    "properties": {
+        "Account-ID": {
+            "type": "string"
+        },
+        "Event-Category": {
+            "enum": [
+                "queue"
+            ],
+            "type": "string"
+        },
+        "Event-Name": {
+            "enum": [
+                "agents_available_req"
+            ],
+            "type": "string"
+        },
+        "Queue-ID": {
+            "type": "string"
+        },
+        "Skills": {
+            "items": {
+                "type": "string"
+            },
+            "type": "array"
+        }
+    },
+    "required": [
+        "Account-ID",
+        "Queue-ID"
+    ],
+    "type": "object"
+}
