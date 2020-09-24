@@ -46,6 +46,10 @@
                 "string"
             ]
         },
+        "default_queue_max_priority": {
+            "description": "acdc default_queue_max_priority",
+            "type": "integer"
+        },
         "max_connect_failures": {
             "default": 3,
             "description": "acdc maximum connect failures",
